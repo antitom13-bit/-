@@ -1,0 +1,1036 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет по заполнению - АКСОН PIM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <style>
+        :root {
+            --primary-blue: #2b7bf6;
+            --text-dark: #1f2937;
+            --text-gray: #6b7280;
+            --border-color: #e5e7eb;
+            --success-green: #10b981;
+            --danger-red: #ef4444;
+            --hover-bg: #f9fafb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* === ГЛАВНОЕ: убираем скролл со всей страницы === */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            background-color: #e5e5e5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            background-color: #ffffff; width: 100%; max-width: 1440px;
+            height: 100%; max-height: 100%;
+            display: flex; flex-direction: column;
+            border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden; /* никакой прокрутки наружу */
+        }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; border-bottom: 1px solid var(--border-color); height: 60px; flex-shrink: 0; }
+        .logo { font-size: 20px; font-weight: 800; color: #d32f2f; }
+        .logo span { color: var(--primary-blue); }
+        .user-profile { display: flex; align-items: center; gap: 15px; font-size: 14px; color: var(--text-dark); }
+        .user-profile i { color: var(--text-gray); cursor: pointer; }
+
+        /* Layout */
+        .main-wrapper { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background-color: #fff; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
+        .nav-item { display: flex; align-items: center; padding: 12px 25px; color: var(--text-dark); font-size: 14px; cursor: pointer; gap: 15px; position: relative; }
+        .nav-item:hover { background-color: var(--hover-bg); }
+        .nav-item i.icon { color: var(--text-gray); width: 20px; text-align: center; }
+        .nav-item.active { background-color: #eef2ff; color: var(--primary-blue); font-weight: 500; }
+        .nav-item.active i.icon { color: var(--primary-blue); }
+        .nav-item.sub-item { padding-left: 55px; }
+        .nav-item.sub-item.active::before { content: ''; position: absolute; left: 30px; top: 50%; transform: translateY(-50%); width: 3px; height: 16px; background-color: #f97316; border-radius: 2px; }
+
+        /* Workspace — фиксированная высота, никакого своего скролла */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 30px;
+            background-color: #fff;
+            overflow: hidden; /* отключаем прокрутку всей рабочей области */
+            min-height: 0;
+        }
+
+        /* Tabs */
+        .tabs-header { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; flex-shrink: 0; }
+        .tab-btn { padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-gray); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .tab-btn:hover { color: var(--primary-blue); }
+        .tab-btn.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); font-weight: 600; }
+
+        /* Toolbar */
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; flex-shrink: 0; }
+        .section-title { font-size: 18px; font-weight: 600; color: var(--text-dark); }
+        .toolbar-actions { display: flex; gap: 10px; }
+        .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; }
+        .upload-btn-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+        .btn { border: 1px solid; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; background-color: #fff; }
+        .btn-upload { border-color: var(--primary-blue); color: var(--primary-blue); }
+        .btn-upload:hover { background-color: #f0f7ff; }
+        .btn-add { border-color: var(--success-green); color: var(--success-green); }
+        .btn-add:hover { background-color: #f0fdf4; }
+
+        .history-info { font-size: 12px; color: var(--text-gray); background-color: var(--hover-bg); padding: 8px 15px; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 15px; flex-shrink: 0; }
+        .history-info strong { color: var(--primary-blue); }
+
+        /* === Вкладки: занимают всё оставшееся место, скролл только внутри === */
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0; /* ВАЖНО: без этого flex-ребёнок не сможет сжаться */
+            overflow: hidden;
+        }
+        .tab-content.active { display: flex; }
+
+        /* === Chart — прокрутки нет, вписывается по размеру === */
+        .chart-wrapper {
+            background: var(--hover-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .chart-container { position: relative; width: 100%; height: 100%; }
+
+        /* === Table — это единственное место, которое прокручивается === */
+        .table-hint { font-size: 11px; color: var(--text-gray); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .table-hint i { color: var(--primary-blue); }
+
+        .table-container {
+            flex: 1;
+            min-height: 0;
+            overflow: auto; /* ← прокрутка ТОЛЬКО здесь */
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #fff;
+        }
+        .table-container::-webkit-scrollbar { width: 12px; height: 12px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .table-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 6px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        .table-container::-webkit-scrollbar-corner { background: #f1f1f1; }
+
+        table {
+            border-collapse: collapse;
+            table-layout: fixed;
+            width: max-content;
+            min-width: 100%;
+            font-size: 12px;
+            color: var(--text-dark);
+        }
+
+        /* Липкая шапка при прокрутке таблицы вниз */
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: var(--hover-bg);
+        }
+
+        th, td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            vertical-align: top;
+            position: relative;
+        }
+        th:last-child, td:last-child { border-right: none; }
+
+        th {
+            font-weight: 600;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            line-height: 1.35;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            user-select: none;
+        }
+
+        td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+            vertical-align: top;
+        }
+
+        tbody tr:hover { background-color: var(--hover-bg); }
+
+        .highlight-percent { color: var(--success-green); background-color: #f0fdf4; }
+        th.highlight-percent { background-color: #f0fdf4; color: #047857; }
+
+        /* Progress cells */
+        .cell-value { font-size: 13px; font-weight: 600; color: var(--text-dark); line-height: 1.2; }
+        .cell-delta {
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+        .cell-delta.positive { color: #047857; background-color: #d1fae5; }
+        .cell-delta.negative { color: #b91c1c; background-color: #fee2e2; }
+        .cell-delta.neutral { color: #6b7280; background-color: #f3f4f6; }
+        .cell-delta i { font-size: 8px; }
+        .cell-delta .delta-value { font-weight: 700; }
+        .cell-delta .delta-percent { font-weight: 500; opacity: 0.8; }
+
+        .actions-cell {
+            text-align: center;
+            vertical-align: middle !important;
+            white-space: nowrap;
+            padding: 10px 8px !important;
+        }
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s;
+            color: var(--text-gray);
+        }
+        .action-btn:hover { background-color: #e5e7eb; }
+        .action-btn.edit:hover { color: var(--primary-blue); background-color: #dbeafe; }
+        .action-btn.delete:hover { color: var(--danger-red); background-color: #fee2e2; }
+
+        /* Resizer */
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: -3px;
+            width: 6px;
+            height: 100%;
+            cursor: col-resize;
+            user-select: none;
+            z-index: 3;
+            background: transparent;
+            transition: background 0.15s;
+        }
+        .resizer:hover, .resizer.active { background: rgba(43, 123, 246, 0.35); }
+        th::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            right: -1px;
+            width: 1px;
+            height: 50%;
+            background: #d1d5db;
+        }
+        th:last-child::after { display: none; }
+
+        /* Empty state */
+        .empty-state { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-gray); gap: 15px; text-align: center; padding: 40px; min-height: 0; }
+        .empty-state i { font-size: 48px; color: #d1d5db; }
+        .empty-state h3 { font-size: 18px; color: var(--text-dark); }
+        .empty-state p { font-size: 14px; max-width: 500px; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-title { font-size: 16px; font-weight: 700; color: var(--text-dark); }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-gray);
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+        .modal-close:hover { background: #f3f4f6; color: var(--text-dark); }
+
+        .modal-body { padding: 20px 24px; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-gray);
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-dark);
+            outline: none;
+            transition: border 0.15s;
+            font-family: inherit;
+        }
+        .form-group input:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(43, 123, 246, 0.12);
+        }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            background: #fafafa;
+            border-radius: 0 0 10px 10px;
+        }
+        .btn-modal {
+            padding: 9px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+            transition: 0.15s;
+        }
+        .btn-cancel { background: #fff; color: var(--text-dark); border-color: var(--border-color); }
+        .btn-cancel:hover { background: #f3f4f6; }
+        .btn-save { background: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
+        .btn-save:hover { background: #1d4ed8; border-color: #1d4ed8; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header class="header">
+        <div class="logo">АКСОН<span>PIM</span></div>
+        <div class="user-profile"><span>Иванов Иван</span><i class="fas fa-sign-out-alt"></i></div>
+    </header>
+
+    <div class="main-wrapper">
+        <aside class="sidebar">
+            <div class="nav-item"><i class="fas fa-th-large icon"></i><span>Мастер каталог</span></div>
+            <div class="nav-item"><i class="fas fa-share-nodes icon"></i><span>Управление каталогом</span></div>
+            <div class="nav-item"><i class="fas fa-border-all icon"></i><span>Матрица квотирования</span></div>
+            <div class="nav-item"><i class="fas fa-user icon"></i><span>Пользователи</span></div>
+            <div class="nav-item"><i class="fas fa-info-circle icon"></i><span>Модерация товаров</span></div>
+            <div class="nav-item"><i class="fas fa-file-alt icon"></i><span>Невыгружаемая номенклатура</span></div>
+            <div class="nav-item"><i class="fas fa-bell icon"></i><span>Управление оповещениями</span></div>
+            <div class="nav-item active"><i class="fas fa-chart-bar icon"></i><span>Отчеты</span></div>
+            <div class="nav-item sub-item active"><span>Сертификаты</span></div>
+            <div class="nav-item"><i class="fas fa-user-tag icon"></i><span>Роли</span></div>
+        </aside>
+
+        <main class="workspace">
+            <div class="toolbar">
+                <h1 class="section-title">Отчет по заполнению</h1>
+                <div class="toolbar-actions">
+                    <button class="btn btn-add" onclick="openAddModal()"><i class="fas fa-plus"></i> Добавить запись</button>
+                    <div class="upload-btn-wrapper">
+                        <button class="btn btn-upload"><i class="fas fa-upload"></i> Загрузить Excel / CSV</button>
+                        <input type="file" id="fileInput" accept=".csv, .xls, .xlsx" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-info" id="historyInfo">
+                <i class="fas fa-info-circle"></i>
+                <span>Загрузите Excel-файл или добавьте запись вручную. Записи можно редактировать и удалять в таблице.</span>
+            </div>
+
+            <div class="tabs-header" id="tabsHeader" style="display:none;">
+                <button class="tab-btn active" onclick="openTab(event, 'tab-table')">Сводная таблица</button>
+                <button class="tab-btn" onclick="openTab(event, 'tab-line')">% Товаров с документацией</button>
+            </div>
+
+            <div id="emptyState" class="empty-state">
+                <i class="fas fa-file-excel"></i>
+                <h3>Нет данных для отображения</h3>
+                <p>Загрузите Excel-файл или нажмите «Добавить запись», чтобы ввести данные вручную.</p>
+            </div>
+
+            <div id="tab-table" class="tab-content">
+                <div class="table-hint">
+                    <i class="fas fa-arrows-alt-h"></i>
+                    Потяните за правый край заголовка — измените ширину. Иконки справа — редактировать/удалить строку.
+                </div>
+                <div class="table-container">
+                    <table id="reportTable">
+                        <colgroup id="tableColgroup"></colgroup>
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Всего товаров, доступных к продаже</th>
+                                <th>Товаров с сертификатом соответствия</th>
+                                <th>Товаров с декларацией соответствия</th>
+                                <th>Товаров с отказным письмом</th>
+                                <th>Товаров с добровольной сертификацией</th>
+                                <th>Товар со свидетельством о государственной регистрации</th>
+                                <th class="highlight-percent">% товаров с разрешительной документацией</th>
+                                <th style="text-align:center; width:90px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-line" class="tab-content">
+                <div class="chart-wrapper">
+                    <div class="chart-container"><canvas id="lineChart"></canvas></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Редактирование записи</div>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="editDate">Дата (ДД.ММ.ГГГГ)</label>
+                <input type="text" id="editDate" placeholder="31.12.2026" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editTotal">Всего товаров</label>
+                    <input type="number" id="editTotal" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                    <label for="editConformity">Сертификаты</label>
+                    <input type="number" id="editConformity" min="0" value="0" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editDeclaration">Декларации</label>
+                    <input type="number" id="editDeclaration" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                    <label for="editWaiver">Отказные</label>
+                    <input type="number" id="editWaiver" min="0" value="0" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editVoluntary">Добровольная сертификация</label>
+                    <input type="number" id="editVoluntary" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                    <label for="editStateReg">Свидетельство</label>
+                    <input type="number" id="editStateReg" min="0" value="0" />
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeModal()">Отмена</button>
+            <button class="btn-modal btn-save" onclick="saveEdit()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    Chart.register(ChartDataLabels);
+
+    const STORAGE_KEY = 'akson_pim_certificates_history';
+
+    let historyData = [];
+    let lineChartInstance = null;
+    let editingOriginalDate = null;
+    let isEditMode = false;
+
+    const INITIAL_COL_WIDTHS = [110, 170, 210, 210, 190, 210, 220, 180, 90];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHistory();
+        renderAll();
+    });
+
+    function loadHistory() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            historyData = stored ? JSON.parse(stored) : [];
+            historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
+        } catch (e) {
+            console.error(e);
+            historyData = [];
+        }
+    }
+
+    function saveHistory() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(historyData));
+        } catch (e) {
+            alert('Не удалось сохранить: ' + e.message);
+        }
+    }
+
+    function openTab(evt, tabName) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.classList.add('active');
+        if (tabName === 'tab-line' && lineChartInstance) {
+            // Небольшая задержка, чтобы вкладка успела стать видимой
+            setTimeout(() => lineChartInstance.resize(), 50);
+        }
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            processFile(rows);
+        };
+        reader.readAsArrayBuffer(file);
+        e.target.value = '';
+    });
+
+    function processFile(rows) {
+        if (rows.length < 2) return alert('Файл пуст или неверного формата.');
+
+        const headers = rows[0].map(h => String(h || '').trim().toLowerCase());
+        let idxType = -1, idxDate = -1, idxQty = -1;
+
+        headers.forEach((h, i) => {
+            if (idxType === -1 && h.includes('тип') && h.includes('документ')) idxType = i;
+            else if (idxDate === -1 && h.includes('дата')) idxDate = i;
+            else if (idxQty === -1 && (h.includes('колич') || h === 'к-во' || h === 'кол-во')) idxQty = i;
+        });
+
+        if (idxType === -1 || idxQty === -1) {
+            return alert('Ошибка: В файле не найдены колонки "тип документа" и "количество".');
+        }
+
+        const todayStr = getTodayString();
+        const groupedByDate = {};
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            const typeRaw = String(row[idxType] || '').trim();
+            const qty = Number(row[idxQty]) || 0;
+            if (!typeRaw) continue;
+
+            let dateStr = todayStr;
+            if (idxDate !== -1 && row[idxDate] !== undefined && row[idxDate] !== null && row[idxDate] !== '') {
+                const parsed = formatDate(row[idxDate]);
+                if (parsed) dateStr = parsed;
+            }
+
+            if (!groupedByDate[dateStr]) {
+                groupedByDate[dateStr] = {
+                    date: dateStr,
+                    total: 0,
+                    conformity: 0,
+                    declaration: 0,
+                    waiver: 0,
+                    voluntary: 0,
+                    stateReg: 0
+                };
+            }
+
+            const rec = groupedByDate[dateStr];
+            const firstChar = typeRaw.charAt(0);
+            if (firstChar === '1') rec.total = qty;
+            else if (firstChar === '2') rec.conformity = qty;
+            else if (firstChar === '3') rec.declaration = qty;
+            else if (firstChar === '4') rec.waiver = qty;
+            else if (firstChar === '5') rec.voluntary = qty;
+            else if (firstChar === '6') rec.stateReg = qty;
+        }
+
+        const newRecords = Object.values(groupedByDate);
+        if (newRecords.length === 0) return alert('Не удалось распознать записи.');
+
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        newRecords.forEach(newRec => {
+            const existingIdx = historyData.findIndex(r => r.date === newRec.date);
+            if (existingIdx !== -1) {
+                historyData[existingIdx] = newRec;
+                updatedCount++;
+            } else {
+                historyData.push(newRec);
+                addedCount++;
+            }
+        });
+
+        historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
+        saveHistory();
+        renderAll();
+
+        let msg = 'Данные загружены.\n';
+        if (addedCount > 0) msg += `• Добавлено: ${addedCount}\n`;
+        if (updatedCount > 0) msg += `• Обновлено: ${updatedCount}\n`;
+        msg += `\nВсего записей: ${historyData.length}`;
+        alert(msg);
+    }
+
+    function getTodayString() {
+        const d = new Date();
+        return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    }
+
+    function formatDate(val) {
+        if (val === null || val === undefined || val === '') return null;
+        if (typeof val === 'number') {
+            const d = new Date((val - 25569) * 86400 * 1000);
+            return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+        }
+        const str = String(val).trim();
+        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) return str;
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+        }
+        return str;
+    }
+
+    function parseRuDate(str) {
+        const parts = str.split('.');
+        if (parts.length !== 3) return 0;
+        return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+    }
+
+    function isValidRuDate(str) {
+        if (!/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) return false;
+        const [d, m, y] = str.split('.').map(Number);
+        if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) return false;
+        const date = new Date(y, m - 1, d);
+        return date.getDate() === d && date.getMonth() === m - 1 && date.getFullYear() === y;
+    }
+
+    function getPercentWithDocs(rec) {
+        if (!rec.total || rec.total <= 0) return 0;
+        const sumAllDocs = rec.conformity + rec.declaration + rec.waiver + rec.voluntary + rec.stateReg;
+        return (sumAllDocs / rec.total) * 100;
+    }
+
+    function renderProgressCell(current, previous, options = {}) {
+        const { isPercent = false } = options;
+        let html = `<div class="cell-value">${isPercent ? current.toFixed(2) + '%' : current.toLocaleString('ru-RU')}</div>`;
+
+        if (previous === null || previous === undefined) {
+            return html + `<div class="cell-delta neutral"><i class="fas fa-minus"></i><span>первый срез</span></div>`;
+        }
+
+        const delta = current - previous;
+        const isZero = Math.abs(delta) < (isPercent ? 0.005 : 0.5);
+        if (isZero) {
+            return html + `<div class="cell-delta neutral"><i class="fas fa-equals"></i><span>без изменений</span></div>`;
+        }
+
+        const isPositive = delta > 0;
+        const badgeClass = isPositive ? 'positive' : 'negative';
+        const arrowIcon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
+        const sign = isPositive ? '+' : '−';
+        const absDelta = Math.abs(delta);
+        const deltaStr = isPercent ? absDelta.toFixed(2) + '%' : Math.round(absDelta).toLocaleString('ru-RU');
+
+        let percentChange = '';
+        if (previous !== 0) {
+            const pct = (delta / previous) * 100;
+            const signPct = delta > 0 ? '+' : '−';
+            percentChange = `<span class="delta-percent">(${signPct}${Math.abs(pct).toFixed(1)}%)</span>`;
+        } else if (delta > 0) {
+            percentChange = `<span class="delta-percent">(new)</span>`;
+        }
+
+        return html + `<div class="cell-delta ${badgeClass}">
+            <i class="fas ${arrowIcon}"></i>
+            <span class="delta-value">${sign}${deltaStr}</span>
+            ${percentChange}
+        </div>`;
+    }
+
+    function renderAll() {
+        const emptyState = document.getElementById('emptyState');
+        const tabsHeader = document.getElementById('tabsHeader');
+        const historyInfo = document.getElementById('historyInfo');
+
+        if (historyData.length === 0) {
+            emptyState.style.display = 'flex';
+            tabsHeader.style.display = 'none';
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            historyInfo.innerHTML = '<i class="fas fa-info-circle"></i><span>Загрузите Excel-файл или добавьте запись вручную.</span>';
+            if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; }
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        tabsHeader.style.display = 'flex';
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-table').classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
+
+        const firstDate = historyData[0].date;
+        const lastDate = historyData[historyData.length - 1].date;
+        historyInfo.innerHTML = `<i class="fas fa-history"></i><span>Записей: <strong>${historyData.length}</strong>. Период: <strong>${firstDate}</strong> — <strong>${lastDate}</strong>.</span>`;
+
+        renderTable();
+        renderLineChart();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        const sortedAsc = [...historyData].sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
+        const sortedDesc = [...sortedAsc].reverse();
+
+        sortedDesc.forEach(rec => {
+            const idxInAsc = sortedAsc.findIndex(r => r.date === rec.date);
+            const prev = idxInAsc > 0 ? sortedAsc[idxInAsc - 1] : null;
+
+            const percentCur = getPercentWithDocs(rec);
+            const percentPrev = prev ? getPercentWithDocs(prev) : null;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><div class="cell-value">${rec.date}</div></td>
+                <td>${renderProgressCell(rec.total, prev ? prev.total : null)}</td>
+                <td>${renderProgressCell(rec.conformity, prev ? prev.conformity : null)}</td>
+                <td>${renderProgressCell(rec.declaration, prev ? prev.declaration : null)}</td>
+                <td>${renderProgressCell(rec.waiver, prev ? prev.waiver : null)}</td>
+                <td>${renderProgressCell(rec.voluntary, prev ? prev.voluntary : null)}</td>
+                <td>${renderProgressCell(rec.stateReg, prev ? prev.stateReg : null)}</td>
+                <td class="highlight-percent">${renderProgressCell(percentCur, percentPrev, { isPercent: true })}</td>
+                <td class="actions-cell">
+                    <button class="action-btn edit" title="Редактировать" onclick="openEditModal('${rec.date}')">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="action-btn delete" title="Удалить" onclick="deleteRecord('${rec.date}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        initTableColumns();
+    }
+
+    function openEditModal(date) {
+        const rec = historyData.find(r => r.date === date);
+        if (!rec) return;
+
+        isEditMode = true;
+        editingOriginalDate = date;
+
+        document.getElementById('modalTitle').textContent = 'Редактирование записи от ' + date;
+        document.getElementById('editDate').value = rec.date;
+        document.getElementById('editTotal').value = rec.total;
+        document.getElementById('editConformity').value = rec.conformity;
+        document.getElementById('editDeclaration').value = rec.declaration;
+        document.getElementById('editWaiver').value = rec.waiver;
+        document.getElementById('editVoluntary').value = rec.voluntary;
+        document.getElementById('editStateReg').value = rec.stateReg;
+
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function openAddModal() {
+        isEditMode = false;
+        editingOriginalDate = null;
+
+        document.getElementById('modalTitle').textContent = 'Новая запись';
+        document.getElementById('editDate').value = getTodayString();
+        document.getElementById('editTotal').value = 0;
+        document.getElementById('editConformity').value = 0;
+        document.getElementById('editDeclaration').value = 0;
+        document.getElementById('editWaiver').value = 0;
+        document.getElementById('editVoluntary').value = 0;
+        document.getElementById('editStateReg').value = 0;
+
+        document.getElementById('editModal').classList.add('active');
+        setTimeout(() => document.getElementById('editDate').focus(), 100);
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').classList.remove('active');
+        editingOriginalDate = null;
+        isEditMode = false;
+    }
+
+    function saveEdit() {
+        const newDate = document.getElementById('editDate').value.trim();
+
+        if (!isValidRuDate(newDate)) {
+            alert('Некорректная дата. Введите в формате ДД.ММ.ГГГГ (например, 31.12.2026).');
+            return;
+        }
+
+        const newRecord = {
+            date: newDate,
+            total: Number(document.getElementById('editTotal').value) || 0,
+            conformity: Number(document.getElementById('editConformity').value) || 0,
+            declaration: Number(document.getElementById('editDeclaration').value) || 0,
+            waiver: Number(document.getElementById('editWaiver').value) || 0,
+            voluntary: Number(document.getElementById('editVoluntary').value) || 0,
+            stateReg: Number(document.getElementById('editStateReg').value) || 0
+        };
+
+        if (isEditMode) {
+            if (newDate !== editingOriginalDate && historyData.some(r => r.date === newDate)) {
+                if (!confirm(`Запись с датой ${newDate} уже существует. Перезаписать её?`)) return;
+                historyData = historyData.filter(r => r.date !== newDate);
+            }
+
+            const recIdx = historyData.findIndex(r => r.date === editingOriginalDate);
+            if (recIdx === -1) { closeModal(); return; }
+            historyData[recIdx] = newRecord;
+        } else {
+            if (historyData.some(r => r.date === newDate)) {
+                if (!confirm(`Запись с датой ${newDate} уже существует. Перезаписать её?`)) return;
+                historyData = historyData.filter(r => r.date !== newDate);
+            }
+            historyData.push(newRecord);
+        }
+
+        historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
+        saveHistory();
+        closeModal();
+        renderAll();
+    }
+
+    function deleteRecord(date) {
+        if (!confirm(`Удалить запись за ${date}? Действие необратимо.`)) return;
+        historyData = historyData.filter(r => r.date !== date);
+        saveHistory();
+        renderAll();
+    }
+
+    document.getElementById('editModal').addEventListener('click', (e) => {
+        if (e.target.id === 'editModal') closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    function initTableColumns() {
+        const table = document.getElementById('reportTable');
+        const colgroup = document.getElementById('tableColgroup');
+        const ths = table.querySelectorAll('thead th');
+
+        colgroup.innerHTML = '';
+        ths.forEach((th, i) => {
+            const col = document.createElement('col');
+            col.style.width = (INITIAL_COL_WIDTHS[i] || 150) + 'px';
+            colgroup.appendChild(col);
+        });
+
+        ths.forEach((th, i) => {
+            if (i === ths.length - 1) return;
+
+            const old = th.querySelector('.resizer');
+            if (old) old.remove();
+
+            const resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            th.appendChild(resizer);
+
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const col = colgroup.children[i];
+                const startX = e.pageX;
+                const startWidth = th.getBoundingClientRect().width;
+
+                resizer.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                const onMove = (ev) => {
+                    const diff = ev.pageX - startX;
+                    const newWidth = Math.max(80, startWidth + diff);
+                    col.style.width = newWidth + 'px';
+                };
+
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                };
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+
+            resizer.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const col = colgroup.children[i];
+
+                const cells = table.querySelectorAll(`tr > *:nth-child(${i + 1})`);
+                let maxWidth = 80;
+                cells.forEach(cell => {
+                    const span = document.createElement('span');
+                    span.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:' + getComputedStyle(cell).font;
+                    const valueEl = cell.querySelector('.cell-value');
+                    span.textContent = valueEl ? valueEl.textContent : cell.textContent;
+                    document.body.appendChild(span);
+                    maxWidth = Math.max(maxWidth, span.offsetWidth);
+                    document.body.removeChild(span);
+                });
+
+                col.style.width = (maxWidth + 30) + 'px';
+            });
+        });
+    }
+
+    function renderLineChart() {
+        const ctx = document.getElementById('lineChart').getContext('2d');
+        const labels = historyData.map(d => d.date);
+        const dataPoints = historyData.map(d => getPercentWithDocs(d).toFixed(2));
+
+        const maxVal = Math.max(...dataPoints.map(Number), 10);
+        const maxY = Math.ceil(maxVal / 5) * 5 + 5;
+
+        if (lineChartInstance) lineChartInstance.destroy();
+
+        lineChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '% Товаров с документацией',
+                    data: dataPoints,
+                    borderColor: '#2ecc71',
+                    backgroundColor: '#2ecc71',
+                    borderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '% Товаров с разрешительной документацией',
+                        font: { size: 16, weight: 'bold', style: 'italic' }
+                    },
+                    legend: { display: false },
+                    datalabels: {
+                        align: 'top',
+                        anchor: 'end',
+                        color: '#ff00ff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: v => v + '%'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const rec = historyData[context.dataIndex];
+                                const sumAll = rec.conformity + rec.declaration + rec.waiver + rec.voluntary + rec.stateReg;
+                                return [
+                                    `Процент: ${context.parsed.y}%`,
+                                    `Документов: ${sumAll.toLocaleString('ru-RU')} из ${rec.total.toLocaleString('ru-RU')}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: maxY,
+                        ticks: { callback: v => v.toFixed(2) + '%' },
+                        grid: { color: '#e5e7eb' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { maxRotation: 45, minRotation: 45 }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
