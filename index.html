@@ -59,6 +59,7 @@
 
         .main-wrapper { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
+        /* SIDEBAR */
         .sidebar { width: 260px; background-color: #fff; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
         .nav-item { display: flex; align-items: center; padding: 12px 25px; color: var(--text-dark); font-size: 14px; cursor: pointer; gap: 15px; position: relative; transition: background 0.15s; }
         .nav-item:hover { background-color: var(--hover-bg); }
@@ -68,6 +69,7 @@
         .nav-item.sub-item { padding-left: 55px; font-size: 13px; }
         .nav-item.sub-item.active::before { content: ''; position: absolute; left: 30px; top: 50%; transform: translateY(-50%); width: 3px; height: 16px; background-color: #f97316; border-radius: 2px; }
 
+        /* WORKSPACE */
         .workspace { flex: 1; display: flex; flex-direction: column; padding: 20px 30px; background-color: #fff; overflow: hidden; min-height: 0; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; flex-shrink: 0; }
         .section-title { font-size: 18px; font-weight: 600; color: var(--text-dark); }
@@ -556,25 +558,84 @@
         openSection('reports', document.querySelector('.sidebar .nav-item[data-section="reports"]'));
     }
 
+    // ============ ОБНОВЛЁННАЯ ФУНКЦИЯ ВХОДА ============
     function attemptLogin() {
         const fio = document.getElementById('loginFio').value.trim();
         const password = document.getElementById('loginPassword').value;
         const errorEl = document.getElementById('loginError');
-        if (!fio || !password) { errorEl.textContent = 'Заполните все поля'; return; }
-        const user = users.find(u => u.fio.toLowerCase() === fio.toLowerCase() && u.password === password);
-        const success = !!user;
-        authLog.push({ datetime: new Date().toLocaleString('ru-RU'), fio, status: success ? 'success' : 'fail' });
-        saveAuthLog();
-        if (success) {
-            currentUser = user;
-            currentSessionId = startSession(user.fio);
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fio: user.fio, sessionId: currentSessionId }));
+
+        // Базовая валидация
+        if (!fio || !password) {
+            errorEl.textContent = 'Заполните все поля';
+            return;
+        }
+        if (fio.length < 3) {
+            errorEl.textContent = 'Логин должен быть не менее 3 символов';
+            return;
+        }
+        if (password.length < 4) {
+            errorEl.textContent = 'Пароль должен быть не менее 4 символов';
+            return;
+        }
+
+        const now = new Date().toLocaleString('ru-RU');
+
+        // Ищем существующего пользователя по логину (без учёта регистра)
+        const existingUser = users.find(u => u.fio.toLowerCase() === fio.toLowerCase());
+
+        if (existingUser) {
+            // ===== ПОВТОРНАЯ АВТОРИЗАЦИЯ =====
+            if (existingUser.password === password) {
+                // Успешный вход
+                authLog.push({ datetime: now, fio, status: 'success' });
+                saveAuthLog();
+
+                currentUser = existingUser;
+                currentSessionId = startSession(existingUser.fio);
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fio: existingUser.fio, sessionId: currentSessionId }));
+
+                errorEl.textContent = '';
+                document.getElementById('loginFio').value = '';
+                document.getElementById('loginPassword').value = '';
+                showMainApp();
+            } else {
+                // Неверный пароль
+                authLog.push({ datetime: now, fio, status: 'fail' });
+                saveAuthLog();
+                errorEl.textContent = 'Неверный пароль. Обратитесь к администратору для сброса.';
+            }
+        } else {
+            // ===== ПЕРВАЯ АВТОРИЗАЦИЯ (авторегистрация) =====
+            const newUser = {
+                fio: fio,
+                password: password,
+                role: 'user',
+                createdAt: new Date().toLocaleString('ru-RU')
+            };
+            users.push(newUser);
+            saveUsers();
+
+            authLog.push({ datetime: now, fio, status: 'success' });
+            saveAuthLog();
+
+            currentUser = newUser;
+            currentSessionId = startSession(newUser.fio);
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fio: newUser.fio, sessionId: currentSessionId }));
+
+            // Информируем пользователя, что создана новая учётная запись
+            setTimeout(() => {
+                alert(
+                    'Добро пожаловать!\n\n' +
+                    'Ваш логин: ' + fio + '\n' +
+                    'Ваш пароль сохранён. Запомните его — при следующем входе потребуется ввести его снова.\n\n' +
+                    'Если забудете пароль — обратитесь к администратору для сброса.'
+                );
+            }, 200);
+
             errorEl.textContent = '';
             document.getElementById('loginFio').value = '';
             document.getElementById('loginPassword').value = '';
             showMainApp();
-        } else {
-            errorEl.textContent = 'Неверный логин или пароль';
         }
     }
 
