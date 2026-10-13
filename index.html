@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-
     <style>
         :root {
             --primary-blue: #2b7bf6;
@@ -19,190 +18,105 @@
             --danger-red: #ef4444;
             --hover-bg: #f9fafb;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        html, body { height: 100%; overflow: hidden; }
+        body { background-color: #e5e5e5; display: flex; justify-content: center; align-items: center; padding: 20px; }
 
-        /* === ГЛАВНОЕ: убираем скролл со всей страницы === */
-        html, body {
-            height: 100%;
-            overflow: hidden;
-        }
-        body {
-            background-color: #e5e5e5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+        body:not(.is-admin) .toolbar-actions { display: none !important; }
+        body:not(.is-admin) th.actions-col, body:not(.is-admin) td.actions-col { display: none !important; }
+        body:not(.is-admin) th.pwd-col, body:not(.is-admin) td.pwd-col { display: none !important; }
 
-        .app-container {
-            background-color: #ffffff; width: 100%; max-width: 1440px;
-            height: 100%; max-height: 100%;
-            display: flex; flex-direction: column;
-            border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            overflow: hidden; /* никакой прокрутки наружу */
-        }
+        .app-container { background-color: #fff; width: 100%; max-width: 1440px; height: 100%; display: flex; flex-direction: column; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
 
-        /* Header */
+        /* LOGIN */
+        .login-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; z-index: 5000; padding: 20px; }
+        .login-screen.hidden { display: none; }
+        .login-box { background: #fff; padding: 40px 36px; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 400px; animation: fadeInUp 0.4s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .login-logo { text-align: center; font-size: 26px; font-weight: 800; color: #d32f2f; margin-bottom: 8px; }
+        .login-logo span { color: var(--primary-blue); }
+        .login-subtitle { text-align: center; color: var(--text-gray); font-size: 13px; margin-bottom: 30px; }
+        .login-title { text-align: center; font-size: 18px; font-weight: 600; color: var(--text-dark); margin-bottom: 24px; }
+        .login-field { margin-bottom: 16px; }
+        .login-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-gray); margin-bottom: 6px; }
+        .login-field input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; }
+        .login-field input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(43,123,246,0.15); }
+        .login-btn { width: 100%; padding: 13px; background: var(--primary-blue); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+        .login-btn:hover { background: #1d4ed8; }
+        .login-error { color: var(--danger-red); font-size: 13px; margin-top: 12px; text-align: center; min-height: 18px; font-weight: 500; }
+
+        /* HEADER */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; border-bottom: 1px solid var(--border-color); height: 60px; flex-shrink: 0; }
         .logo { font-size: 20px; font-weight: 800; color: #d32f2f; }
         .logo span { color: var(--primary-blue); }
-        .user-profile { display: flex; align-items: center; gap: 15px; font-size: 14px; color: var(--text-dark); }
-        .user-profile i { color: var(--text-gray); cursor: pointer; }
+        .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-dark); }
+        .user-info .user-name { font-weight: 600; }
+        .user-role-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .user-role-badge.admin { background: #ede9fe; color: #6d28d9; }
+        .user-role-badge.user { background: #f3f4f6; color: #4b5563; }
+        .logout-btn { background: #fff; border: 1px solid var(--border-color); color: var(--text-gray); cursor: pointer; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .logout-btn:hover { border-color: var(--danger-red); color: var(--danger-red); background: #fef2f2; }
 
-        /* Layout */
         .main-wrapper { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
-        /* Sidebar */
         .sidebar { width: 260px; background-color: #fff; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
-        .nav-item { display: flex; align-items: center; padding: 12px 25px; color: var(--text-dark); font-size: 14px; cursor: pointer; gap: 15px; position: relative; }
+        .nav-item { display: flex; align-items: center; padding: 12px 25px; color: var(--text-dark); font-size: 14px; cursor: pointer; gap: 15px; position: relative; transition: background 0.15s; }
         .nav-item:hover { background-color: var(--hover-bg); }
         .nav-item i.icon { color: var(--text-gray); width: 20px; text-align: center; }
         .nav-item.active { background-color: #eef2ff; color: var(--primary-blue); font-weight: 500; }
         .nav-item.active i.icon { color: var(--primary-blue); }
-        .nav-item.sub-item { padding-left: 55px; }
+        .nav-item.sub-item { padding-left: 55px; font-size: 13px; }
         .nav-item.sub-item.active::before { content: ''; position: absolute; left: 30px; top: 50%; transform: translateY(-50%); width: 3px; height: 16px; background-color: #f97316; border-radius: 2px; }
 
-        /* Workspace — фиксированная высота, никакого своего скролла */
-        .workspace {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 30px;
-            background-color: #fff;
-            overflow: hidden; /* отключаем прокрутку всей рабочей области */
-            min-height: 0;
-        }
-
-        /* Tabs */
-        .tabs-header { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; flex-shrink: 0; }
-        .tab-btn { padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-gray); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .tab-btn:hover { color: var(--primary-blue); }
-        .tab-btn.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); font-weight: 600; }
-
-        /* Toolbar */
+        .workspace { flex: 1; display: flex; flex-direction: column; padding: 20px 30px; background-color: #fff; overflow: hidden; min-height: 0; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; flex-shrink: 0; }
         .section-title { font-size: 18px; font-weight: 600; color: var(--text-dark); }
         .toolbar-actions { display: flex; gap: 10px; }
         .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; }
         .upload-btn-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
-        .btn { border: 1px solid; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; background-color: #fff; }
+        .btn { border: 1px solid; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; background-color: #fff; }
         .btn-upload { border-color: var(--primary-blue); color: var(--primary-blue); }
         .btn-upload:hover { background-color: #f0f7ff; }
         .btn-add { border-color: var(--success-green); color: var(--success-green); }
         .btn-add:hover { background-color: #f0fdf4; }
+        .btn-clear-sessions { border-color: var(--danger-red); color: var(--danger-red); }
+        .btn-clear-sessions:hover { background-color: #fef2f2; }
 
         .history-info { font-size: 12px; color: var(--text-gray); background-color: var(--hover-bg); padding: 8px 15px; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 15px; flex-shrink: 0; }
         .history-info strong { color: var(--primary-blue); }
 
-        /* === Вкладки: занимают всё оставшееся место, скролл только внутри === */
-        .tab-content {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            min-height: 0; /* ВАЖНО: без этого flex-ребёнок не сможет сжаться */
-            overflow: hidden;
-        }
-        .tab-content.active { display: flex; }
+        .section-content { display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+        .section-content.active { display: flex; }
 
-        /* === Chart — прокрутки нет, вписывается по размеру === */
-        .chart-wrapper {
-            background: var(--hover-bg);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 0;
-            overflow: hidden;
-        }
+        .subtabs-header { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; flex-shrink: 0; }
+        .subtab-btn { padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-gray); font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .subtab-btn:hover { color: var(--primary-blue); }
+        .subtab-btn.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); font-weight: 600; }
+        .subtab-content { display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+        .subtab-content.active { display: flex; }
+
+        .chart-wrapper { background: var(--hover-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; overflow: hidden; }
         .chart-container { position: relative; width: 100%; height: 100%; }
 
-        /* === Table — это единственное место, которое прокручивается === */
         .table-hint { font-size: 11px; color: var(--text-gray); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
         .table-hint i { color: var(--primary-blue); }
 
-        .table-container {
-            flex: 1;
-            min-height: 0;
-            overflow: auto; /* ← прокрутка ТОЛЬКО здесь */
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: #fff;
-        }
+        .table-container { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #fff; }
         .table-container::-webkit-scrollbar { width: 12px; height: 12px; }
-        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
         .table-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 6px; }
-        .table-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        .table-container::-webkit-scrollbar-corner { background: #f1f1f1; }
 
-        table {
-            border-collapse: collapse;
-            table-layout: fixed;
-            width: max-content;
-            min-width: 100%;
-            font-size: 12px;
-            color: var(--text-dark);
-        }
-
-        /* Липкая шапка при прокрутке таблицы вниз */
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background-color: var(--hover-bg);
-        }
-
-        th, td {
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-            vertical-align: top;
-            position: relative;
-        }
+        table { border-collapse: collapse; table-layout: fixed; width: max-content; min-width: 100%; font-size: 12px; color: var(--text-dark); }
+        thead th { position: sticky; top: 0; z-index: 2; background-color: var(--hover-bg); }
+        th, td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); vertical-align: top; position: relative; }
         th:last-child, td:last-child { border-right: none; }
-
-        th {
-            font-weight: 600;
-            color: var(--text-gray);
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            line-height: 1.35;
-            white-space: normal;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-            user-select: none;
-        }
-
-        td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: 500;
-            vertical-align: top;
-        }
-
+        th { font-weight: 600; color: var(--text-gray); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; line-height: 1.35; white-space: normal; word-break: break-word; user-select: none; }
+        td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; vertical-align: top; }
         tbody tr:hover { background-color: var(--hover-bg); }
-
         .highlight-percent { color: var(--success-green); background-color: #f0fdf4; }
         th.highlight-percent { background-color: #f0fdf4; color: #047857; }
 
-        /* Progress cells */
         .cell-value { font-size: 13px; font-weight: 600; color: var(--text-dark); line-height: 1.2; }
-        .cell-delta {
-            font-size: 10px;
-            font-weight: 600;
-            margin-top: 3px;
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            padding: 1px 6px;
-            border-radius: 4px;
-            line-height: 1.4;
-        }
+        .cell-delta { font-size: 10px; font-weight: 600; margin-top: 3px; display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 4px; line-height: 1.4; }
         .cell-delta.positive { color: #047857; background-color: #d1fae5; }
         .cell-delta.negative { color: #b91c1c; background-color: #fee2e2; }
         .cell-delta.neutral { color: #6b7280; background-color: #f3f4f6; }
@@ -210,165 +124,97 @@
         .cell-delta .delta-value { font-weight: 700; }
         .cell-delta .delta-percent { font-weight: 500; opacity: 0.8; }
 
-        .actions-cell {
-            text-align: center;
-            vertical-align: middle !important;
-            white-space: nowrap;
-            padding: 10px 8px !important;
-        }
-        .action-btn {
-            background: none;
-            border: none;
-            padding: 6px 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.15s;
-            color: var(--text-gray);
-        }
+        .actions-cell { text-align: center; vertical-align: middle !important; white-space: nowrap; padding: 10px 8px !important; }
+        .action-btn { background: none; border: none; padding: 6px 8px; border-radius: 5px; cursor: pointer; font-size: 13px; color: var(--text-gray); }
         .action-btn:hover { background-color: #e5e7eb; }
         .action-btn.edit:hover { color: var(--primary-blue); background-color: #dbeafe; }
         .action-btn.delete:hover { color: var(--danger-red); background-color: #fee2e2; }
 
-        /* Resizer */
-        .resizer {
-            position: absolute;
-            top: 0;
-            right: -3px;
-            width: 6px;
-            height: 100%;
-            cursor: col-resize;
-            user-select: none;
-            z-index: 3;
-            background: transparent;
-            transition: background 0.15s;
-        }
-        .resizer:hover, .resizer.active { background: rgba(43, 123, 246, 0.35); }
-        th::after {
-            content: '';
-            position: absolute;
-            top: 25%;
-            right: -1px;
-            width: 1px;
-            height: 50%;
-            background: #d1d5db;
-        }
+        .resizer { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; user-select: none; z-index: 3; }
+        .resizer:hover, .resizer.active { background: rgba(43,123,246,0.35); }
+        th::after { content: ''; position: absolute; top: 25%; right: -1px; width: 1px; height: 50%; background: #d1d5db; }
         th:last-child::after { display: none; }
 
-        /* Empty state */
-        .empty-state { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-gray); gap: 15px; text-align: center; padding: 40px; min-height: 0; }
+        .empty-state { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-gray); gap: 15px; text-align: center; padding: 40px; }
         .empty-state i { font-size: 48px; color: #d1d5db; }
         .empty-state h3 { font-size: 18px; color: var(--text-dark); }
         .empty-state p { font-size: 14px; max-width: 500px; }
 
+        .access-denied { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; text-align: center; padding: 40px; }
+        .access-denied-icon { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); display: flex; justify-content: center; align-items: center; font-size: 46px; color: #dc2626; margin-bottom: 10px; }
+        .access-denied h2 { font-size: 22px; color: var(--text-dark); font-weight: 700; }
+        .access-denied .deny-message { font-size: 15px; color: var(--text-gray); max-width: 460px; line-height: 1.6; }
+        .access-denied .deny-message strong { color: #b45309; }
+        .access-denied-back { margin-top: 10px; padding: 10px 22px; background: var(--primary-blue); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .access-denied-back:hover { background: #1d4ed8; }
+
+        .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .status-badge.success { background: #d1fae5; color: #047857; }
+        .status-badge.fail { background: #fee2e2; color: #b91c1c; }
+        .status-badge.active { background: #dbeafe; color: #1d4ed8; }
+        .status-badge.ended { background: #f3f4f6; color: #4b5563; }
+
+        .password-cell { display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 12px; }
+        .password-toggle { background: none; border: none; color: var(--text-gray); cursor: pointer; padding: 2px 5px; border-radius: 4px; font-size: 11px; }
+        .password-toggle:hover { background: #e5e7eb; color: var(--text-dark); }
+        .password-masked { letter-spacing: 2px; }
+        .active-timer { font-family: monospace; font-weight: 700; color: #1d4ed8; }
+        .users-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+
         /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; justify-content: center; align-items: center; padding: 20px; }
         .modal-overlay.active { display: flex; }
-
-        .modal {
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-            width: 100%;
-            max-width: 520px;
-            max-height: 90vh;
-            overflow-y: auto;
-            animation: fadeIn 0.2s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 24px;
-            border-bottom: 1px solid var(--border-color);
-        }
+        .modal { background: #fff; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border-color); }
         .modal-title { font-size: 16px; font-weight: 700; color: var(--text-dark); }
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 20px;
-            color: var(--text-gray);
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
-            transition: background 0.15s;
-        }
+        .modal-close { background: none; border: none; font-size: 20px; color: var(--text-gray); cursor: pointer; width: 30px; height: 30px; border-radius: 6px; }
         .modal-close:hover { background: #f3f4f6; color: var(--text-dark); }
-
         .modal-body { padding: 20px 24px; }
-
         .form-group { margin-bottom: 14px; }
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-gray);
-            margin-bottom: 5px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 13px;
-            color: var(--text-dark);
-            outline: none;
-            transition: border 0.15s;
-            font-family: inherit;
-        }
-        .form-group input:focus {
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(43, 123, 246, 0.12);
-        }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-gray); margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; color: var(--text-dark); outline: none; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(43,123,246,0.12); }
         .form-row { display: flex; gap: 12px; }
         .form-row .form-group { flex: 1; }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 16px 24px;
-            border-top: 1px solid var(--border-color);
-            background: #fafafa;
-            border-radius: 0 0 10px 10px;
-        }
-        .btn-modal {
-            padding: 9px 18px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid;
-            transition: 0.15s;
-        }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border-color); background: #fafafa; }
+        .btn-modal { padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid; }
         .btn-cancel { background: #fff; color: var(--text-dark); border-color: var(--border-color); }
         .btn-cancel:hover { background: #f3f4f6; }
         .btn-save { background: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
-        .btn-save:hover { background: #1d4ed8; border-color: #1d4ed8; }
+        .btn-save:hover { background: #1d4ed8; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-box">
+        <div class="login-logo">АКСОН<span>PIM</span></div>
+        <div class="login-subtitle">Система отчётности</div>
+        <div class="login-title">Вход в систему</div>
+        <div class="login-field">
+            <label>Логин (ФИО)</label>
+            <input type="text" id="loginFio" placeholder="Введите ваш логин" autocomplete="off" />
+        </div>
+        <div class="login-field">
+            <label>Пароль</label>
+            <input type="password" id="loginPassword" placeholder="Введите пароль" autocomplete="off" />
+        </div>
+        <button class="login-btn" onclick="attemptLogin()">Войти</button>
+        <div class="login-error" id="loginError"></div>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="app-container" id="mainApp" style="display:none;">
     <header class="header">
         <div class="logo">АКСОН<span>PIM</span></div>
-        <div class="user-profile"><span>Иванов Иван</span><i class="fas fa-sign-out-alt"></i></div>
+        <div class="user-info">
+            <i class="fas fa-user-circle" style="color: var(--primary-blue); font-size: 18px;"></i>
+            <span class="user-name" id="currentUserName">—</span>
+            <span class="user-role-badge user" id="currentUserRole">Просмотр</span>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выход</button>
+        </div>
     </header>
 
     <div class="main-wrapper">
@@ -380,15 +226,20 @@
             <div class="nav-item"><i class="fas fa-info-circle icon"></i><span>Модерация товаров</span></div>
             <div class="nav-item"><i class="fas fa-file-alt icon"></i><span>Невыгружаемая номенклатура</span></div>
             <div class="nav-item"><i class="fas fa-bell icon"></i><span>Управление оповещениями</span></div>
-            <div class="nav-item active"><i class="fas fa-chart-bar icon"></i><span>Отчеты</span></div>
-            <div class="nav-item sub-item active"><span>Сертификаты</span></div>
+            <div class="nav-item active" id="navReports"><i class="fas fa-chart-bar icon"></i><span>Отчеты</span></div>
+
+            <div class="nav-item sub-item active" data-section="reports" onclick="openSection('reports', this)"><span>Сертификаты</span></div>
+            <div class="nav-item sub-item" data-section="authlog" onclick="openSection('authlog', this)"><span>История авторизации</span></div>
+            <div class="nav-item sub-item" data-section="sessions" onclick="openSection('sessions', this)"><span>Пользователи</span></div>
+            <div class="nav-item sub-item" data-section="users" onclick="openSection('users', this)"><span>Управление пользователями</span></div>
+
             <div class="nav-item"><i class="fas fa-user-tag icon"></i><span>Роли</span></div>
         </aside>
 
         <main class="workspace">
             <div class="toolbar">
-                <h1 class="section-title">Отчет по заполнению</h1>
-                <div class="toolbar-actions">
+                <h1 class="section-title" id="pageTitle">Отчет по заполнению</h1>
+                <div class="toolbar-actions" id="toolbarActions">
                     <button class="btn btn-add" onclick="openAddModal()"><i class="fas fa-plus"></i> Добавить запись</button>
                     <div class="upload-btn-wrapper">
                         <button class="btn btn-upload"><i class="fas fa-upload"></i> Загрузить Excel / CSV</button>
@@ -399,102 +250,160 @@
 
             <div class="history-info" id="historyInfo">
                 <i class="fas fa-info-circle"></i>
-                <span>Загрузите Excel-файл или добавьте запись вручную. Записи можно редактировать и удалять в таблице.</span>
-            </div>
-
-            <div class="tabs-header" id="tabsHeader" style="display:none;">
-                <button class="tab-btn active" onclick="openTab(event, 'tab-table')">Сводная таблица</button>
-                <button class="tab-btn" onclick="openTab(event, 'tab-line')">% Товаров с документацией</button>
+                <span>Загрузите Excel-файл или добавьте запись вручную.</span>
             </div>
 
             <div id="emptyState" class="empty-state">
                 <i class="fas fa-file-excel"></i>
                 <h3>Нет данных для отображения</h3>
-                <p>Загрузите Excel-файл или нажмите «Добавить запись», чтобы ввести данные вручную.</p>
+                <p>Отчёт ещё не заполнен.</p>
             </div>
 
-            <div id="tab-table" class="tab-content">
-                <div class="table-hint">
-                    <i class="fas fa-arrows-alt-h"></i>
-                    Потяните за правый край заголовка — измените ширину. Иконки справа — редактировать/удалить строку.
+            <!-- SECTION: Reports -->
+            <div id="section-reports" class="section-content">
+                <div class="subtabs-header">
+                    <button class="subtab-btn active" data-subtab="tab-table" onclick="switchSubTab('tab-table', this)">Сводная таблица</button>
+                    <button class="subtab-btn" data-subtab="tab-line" onclick="switchSubTab('tab-line', this)">% Товаров с документацией</button>
                 </div>
-                <div class="table-container">
-                    <table id="reportTable">
-                        <colgroup id="tableColgroup"></colgroup>
-                        <thead>
-                            <tr>
-                                <th>Дата</th>
-                                <th>Всего товаров, доступных к продаже</th>
-                                <th>Товаров с сертификатом соответствия</th>
-                                <th>Товаров с декларацией соответствия</th>
-                                <th>Товаров с отказным письмом</th>
-                                <th>Товаров с добровольной сертификацией</th>
-                                <th>Товар со свидетельством о государственной регистрации</th>
-                                <th class="highlight-percent">% товаров с разрешительной документацией</th>
-                                <th style="text-align:center; width:90px;">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
+                <div id="tab-table" class="subtab-content active">
+                    <div class="table-hint"><i class="fas fa-arrows-alt-h"></i> Потяните за правый край заголовка — измените ширину.</div>
+                    <div class="table-container">
+                        <table id="reportTable">
+                            <colgroup id="tableColgroup"></colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Всего товаров, доступных к продаже</th>
+                                    <th>Товаров с сертификатом соответствия</th>
+                                    <th>Товаров с декларацией соответствия</th>
+                                    <th>Товаров с отказным письмом</th>
+                                    <th>Товаров с добровольной сертификацией</th>
+                                    <th>Товар со свидетельством о государственной регистрации</th>
+                                    <th class="highlight-percent">% товаров с разрешительной документацией</th>
+                                    <th class="actions-col" style="text-align:center; width:90px;">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="tab-line" class="subtab-content">
+                    <div class="chart-wrapper"><div class="chart-container"><canvas id="lineChart"></canvas></div></div>
                 </div>
             </div>
 
-            <div id="tab-line" class="tab-content">
-                <div class="chart-wrapper">
-                    <div class="chart-container"><canvas id="lineChart"></canvas></div>
+            <!-- SECTION: Auth log -->
+            <div id="section-authlog" class="section-content">
+                <div id="authlogDenied" class="access-denied" style="display:none;">
+                    <div class="access-denied-icon"><i class="fas fa-lock"></i></div>
+                    <h2>Просмотр недоступен</h2>
+                    <p class="deny-message">Раздел «История авторизации» доступен только администратору.<br><strong>Ограничение прав.</strong></p>
+                    <button class="access-denied-back" onclick="openSection('reports')"><i class="fas fa-arrow-left"></i> Вернуться к отчёту</button>
+                </div>
+                <div id="authlogContent" style="display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
+                    <div class="table-hint"><i class="fas fa-shield-alt"></i> Все попытки входа (успешные и неудачные).</div>
+                    <div class="table-container">
+                        <table id="authLogTable">
+                            <thead><tr><th style="width:180px;">Дата и время</th><th>Логин (ФИО)</th><th style="width:200px;">Статус</th></tr></thead>
+                            <tbody id="authLogBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Sessions -->
+            <div id="section-sessions" class="section-content">
+                <div id="sessionsDenied" class="access-denied" style="display:none;">
+                    <div class="access-denied-icon"><i class="fas fa-lock"></i></div>
+                    <h2>Просмотр недоступен</h2>
+                    <p class="deny-message">Раздел «Пользователи» (журнал сессий) доступен только администратору.<br><strong>Ограничение прав.</strong></p>
+                    <button class="access-denied-back" onclick="openSection('reports')"><i class="fas fa-arrow-left"></i> Вернуться к отчёту</button>
+                </div>
+                <div id="sessionsContent" style="display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
+                    <div class="table-hint"><i class="fas fa-history"></i> Журнал сессий: логин, пароль, время входа/выхода и длительность.</div>
+                    <div class="users-actions"><button class="btn btn-clear-sessions" onclick="clearSessionsLog()"><i class="fas fa-trash"></i> Очистить историю сессий</button></div>
+                    <div class="table-container">
+                        <table id="sessionsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:180px;">Логин (ФИО)</th>
+                                    <th class="pwd-col" style="width:150px;">Пароль</th>
+                                    <th style="width:200px;">Дата и время входа</th>
+                                    <th style="width:200px;">Дата и время выхода</th>
+                                    <th style="width:130px;">Длительность</th>
+                                    <th style="width:130px;">Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessionsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Users -->
+            <div id="section-users" class="section-content">
+                <div id="usersDenied" class="access-denied" style="display:none;">
+                    <div class="access-denied-icon"><i class="fas fa-lock"></i></div>
+                    <h2>Просмотр недоступен</h2>
+                    <p class="deny-message">Раздел «Управление пользователями» доступен только администратору.<br><strong>Ограничение прав.</strong></p>
+                    <button class="access-denied-back" onclick="openSection('reports')"><i class="fas fa-arrow-left"></i> Вернуться к отчёту</button>
+                </div>
+                <div id="usersContent" style="display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
+                    <div class="table-hint"><i class="fas fa-users-cog"></i> Управление учётными записями.</div>
+                    <div class="users-actions"><button class="btn btn-add" onclick="openUserModal()"><i class="fas fa-user-plus"></i> Добавить пользователя</button></div>
+                    <div class="table-container">
+                        <table id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>Логин (ФИО)</th>
+                                    <th style="width:180px;">Пароль</th>
+                                    <th style="width:200px;">Роль</th>
+                                    <th style="width:170px;">Дата создания</th>
+                                    <th style="width:120px; text-align:center;">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL: report -->
 <div class="modal-overlay" id="editModal">
     <div class="modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <div class="modal-title" id="modalTitle">Редактирование записи</div>
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-        </div>
+        <div class="modal-header"><div class="modal-title" id="modalTitle">Редактирование записи</div><button class="modal-close" onclick="closeModal()">&times;</button></div>
         <div class="modal-body">
-            <div class="form-group">
-                <label for="editDate">Дата (ДД.ММ.ГГГГ)</label>
-                <input type="text" id="editDate" placeholder="31.12.2026" />
+            <div class="form-group"><label for="editDate">Дата (ДД.ММ.ГГГГ)</label><input type="text" id="editDate" /></div>
+            <div class="form-row">
+                <div class="form-group"><label for="editTotal">Всего товаров</label><input type="number" id="editTotal" min="0" value="0" /></div>
+                <div class="form-group"><label for="editConformity">Сертификаты</label><input type="number" id="editConformity" min="0" value="0" /></div>
             </div>
             <div class="form-row">
-                <div class="form-group">
-                    <label for="editTotal">Всего товаров</label>
-                    <input type="number" id="editTotal" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                    <label for="editConformity">Сертификаты</label>
-                    <input type="number" id="editConformity" min="0" value="0" />
-                </div>
+                <div class="form-group"><label for="editDeclaration">Декларации</label><input type="number" id="editDeclaration" min="0" value="0" /></div>
+                <div class="form-group"><label for="editWaiver">Отказные</label><input type="number" id="editWaiver" min="0" value="0" /></div>
             </div>
             <div class="form-row">
-                <div class="form-group">
-                    <label for="editDeclaration">Декларации</label>
-                    <input type="number" id="editDeclaration" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                    <label for="editWaiver">Отказные</label>
-                    <input type="number" id="editWaiver" min="0" value="0" />
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editVoluntary">Добровольная сертификация</label>
-                    <input type="number" id="editVoluntary" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                    <label for="editStateReg">Свидетельство</label>
-                    <input type="number" id="editStateReg" min="0" value="0" />
-                </div>
+                <div class="form-group"><label for="editVoluntary">Добровольная</label><input type="number" id="editVoluntary" min="0" value="0" /></div>
+                <div class="form-group"><label for="editStateReg">Свидетельство</label><input type="number" id="editStateReg" min="0" value="0" /></div>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn-modal btn-cancel" onclick="closeModal()">Отмена</button>
-            <button class="btn-modal btn-save" onclick="saveEdit()">Сохранить</button>
+        <div class="modal-footer"><button class="btn-modal btn-cancel" onclick="closeModal()">Отмена</button><button class="btn-modal btn-save" onclick="saveEdit()">Сохранить</button></div>
+    </div>
+</div>
+
+<!-- MODAL: user -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header"><div class="modal-title" id="userModalTitle">Новый пользователь</div><button class="modal-close" onclick="closeUserModal()">&times;</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label for="userFio">Логин (ФИО)</label><input type="text" id="userFio" placeholder="например, i.ivanov" /></div>
+            <div class="form-group"><label for="userPassword">Пароль</label><input type="text" id="userPassword" placeholder="Минимум 4 символа" /></div>
+            <div class="form-group"><label for="userRole">Роль</label><select id="userRole"><option value="user">Сотрудник (только просмотр)</option><option value="admin">Администратор</option></select></div>
         </div>
+        <div class="modal-footer"><button class="btn-modal btn-cancel" onclick="closeUserModal()">Отмена</button><button class="btn-modal btn-save" onclick="saveUser()">Сохранить</button></div>
     </div>
 </div>
 
@@ -502,53 +411,394 @@
     Chart.register(ChartDataLabels);
 
     const STORAGE_KEY = 'akson_pim_certificates_history';
+    const USERS_KEY = 'akson_pim_users';
+    const AUTH_LOG_KEY = 'akson_pim_auth_log';
+    const SESSIONS_KEY = 'akson_pim_sessions';
+    const SESSION_KEY = 'akson_pim_session';
+    const ADMIN_LOGIN = 'a.komorin';
 
     let historyData = [];
+    let users = [];
+    let authLog = [];
+    let sessions = [];
+    let currentUser = null;
+    let currentSessionId = null;
     let lineChartInstance = null;
     let editingOriginalDate = null;
     let isEditMode = false;
+    let editingUserFio = null;
+    let sessionsTimer = null;
 
     const INITIAL_COL_WIDTHS = [110, 170, 210, 210, 190, 210, 220, 180, 90];
 
+    function formatDateTime(ts) { const d = new Date(ts); return d.toLocaleDateString('ru-RU') + ', ' + d.toLocaleTimeString('ru-RU'); }
+    function formatDuration(s) {
+        if (s === null || s === undefined) return '—';
+        if (s < 60) return s + ' сек';
+        const m = Math.floor(s / 60), sec = s % 60;
+        if (m < 60) return m + ' мин ' + sec + ' сек';
+        const h = Math.floor(m / 60), rm = m % 60;
+        return h + ' ч ' + rm + ' мин';
+    }
+    function getTodayString() { const d = new Date(); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+    function parseRuDate(str) { const p = str.split('.'); if (p.length !== 3) return 0; return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime(); }
+    function formatDate(val) {
+        if (val === null || val === undefined || val === '') return null;
+        if (typeof val === 'number') { const d = new Date((val - 25569) * 86400 * 1000); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+        const str = String(val).trim();
+        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) return str;
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+        return str;
+    }
+    function isValidRuDate(str) {
+        if (!/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) return false;
+        const [d, m, y] = str.split('.').map(Number);
+        if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) return false;
+        const dt = new Date(y, m - 1, d);
+        return dt.getDate() === d && dt.getMonth() === m - 1 && dt.getFullYear() === y;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        loadHistory();
-        renderAll();
+        initDefaultAdmin();
+        loadAllData();
+        const session = sessionStorage.getItem(SESSION_KEY);
+        if (session) {
+            try {
+                const sessUser = JSON.parse(session);
+                const found = users.find(u => u.fio === sessUser.fio);
+                if (found) {
+                    currentUser = found;
+                    currentSessionId = sessUser.sessionId || null;
+                    const activeSession = sessions.find(s => s.id === currentSessionId && s.status === 'active');
+                    if (!activeSession) {
+                        currentSessionId = startSession(found.fio);
+                        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fio: found.fio, sessionId: currentSessionId }));
+                    }
+                    showMainApp();
+                    return;
+                }
+            } catch(e) {}
+        }
+        showLoginScreen();
     });
 
-    function loadHistory() {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            historyData = stored ? JSON.parse(stored) : [];
-            historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
-        } catch (e) {
-            console.error(e);
-            historyData = [];
+    window.addEventListener('beforeunload', () => { if (currentSessionId) endSession(currentSessionId); });
+
+    function initDefaultAdmin() {
+        const stored = localStorage.getItem(USERS_KEY);
+        if (!stored) {
+            localStorage.setItem(USERS_KEY, JSON.stringify([{ fio: ADMIN_LOGIN, password: 'admin123', role: 'admin', createdAt: new Date().toLocaleString('ru-RU') }]));
+        } else {
+            try {
+                const parsed = JSON.parse(stored);
+                if (!parsed.some(u => u.fio === ADMIN_LOGIN)) {
+                    parsed.unshift({ fio: ADMIN_LOGIN, password: 'admin123', role: 'admin', createdAt: new Date().toLocaleString('ru-RU') });
+                    localStorage.setItem(USERS_KEY, JSON.stringify(parsed));
+                }
+            } catch(e) {}
         }
     }
 
-    function saveHistory() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(historyData));
-        } catch (e) {
-            alert('Не удалось сохранить: ' + e.message);
+    function loadAllData() {
+        try { historyData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { historyData = []; }
+        try { users = JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch(e) { users = []; }
+        try { authLog = JSON.parse(localStorage.getItem(AUTH_LOG_KEY)) || []; } catch(e) { authLog = []; }
+        try { sessions = JSON.parse(localStorage.getItem(SESSIONS_KEY)) || []; } catch(e) { sessions = []; }
+        historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
+    }
+
+    function saveHistory() { localStorage.setItem(STORAGE_KEY, JSON.stringify(historyData)); }
+    function saveUsers() { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
+    function saveAuthLog() { localStorage.setItem(AUTH_LOG_KEY, JSON.stringify(authLog)); }
+    function saveSessions() { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)); }
+    function isAdminUser() { return currentUser && currentUser.role === 'admin'; }
+
+    function startSession(fio) {
+        const now = Date.now();
+        sessions.forEach(s => {
+            if (s.fio === fio && s.status === 'active') {
+                s.status = 'ended'; s.logoutTime = formatDateTime(now); s.logoutTimestamp = now;
+                s.duration = Math.round((now - s.loginTimestamp) / 1000);
+            }
+        });
+        const id = 's_' + now + '_' + Math.random().toString(36).slice(2, 8);
+        sessions.push({ id, fio, loginTime: formatDateTime(now), loginTimestamp: now, logoutTime: null, logoutTimestamp: null, duration: null, status: 'active' });
+        saveSessions();
+        return id;
+    }
+    function endSession(sessionId) {
+        if (!sessionId) return;
+        const s = sessions.find(x => x.id === sessionId);
+        if (!s || s.status !== 'active') return;
+        const now = Date.now();
+        s.status = 'ended'; s.logoutTime = formatDateTime(now); s.logoutTimestamp = now;
+        s.duration = Math.round((now - s.loginTimestamp) / 1000);
+        saveSessions();
+    }
+
+    function showLoginScreen() { document.getElementById('loginScreen').classList.remove('hidden'); document.getElementById('mainApp').style.display = 'none'; }
+
+    function showMainApp() {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('mainApp').style.display = 'flex';
+        document.getElementById('currentUserName').textContent = currentUser.fio;
+        const roleBadge = document.getElementById('currentUserRole');
+        if (isAdminUser()) {
+            roleBadge.textContent = 'Администратор'; roleBadge.className = 'user-role-badge admin';
+            document.body.classList.add('is-admin');
+        } else {
+            roleBadge.textContent = 'Только просмотр'; roleBadge.className = 'user-role-badge user';
+            document.body.classList.remove('is-admin');
+        }
+        renderAll(); renderAuthLog(); renderSessions(); startSessionsTimer();
+        if (isAdminUser()) renderUsers();
+        openSection('reports', document.querySelector('.sidebar .nav-item[data-section="reports"]'));
+    }
+
+    function attemptLogin() {
+        const fio = document.getElementById('loginFio').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const errorEl = document.getElementById('loginError');
+        if (!fio || !password) { errorEl.textContent = 'Заполните все поля'; return; }
+        const user = users.find(u => u.fio.toLowerCase() === fio.toLowerCase() && u.password === password);
+        const success = !!user;
+        authLog.push({ datetime: new Date().toLocaleString('ru-RU'), fio, status: success ? 'success' : 'fail' });
+        saveAuthLog();
+        if (success) {
+            currentUser = user;
+            currentSessionId = startSession(user.fio);
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fio: user.fio, sessionId: currentSessionId }));
+            errorEl.textContent = '';
+            document.getElementById('loginFio').value = '';
+            document.getElementById('loginPassword').value = '';
+            showMainApp();
+        } else {
+            errorEl.textContent = 'Неверный логин или пароль';
         }
     }
 
-    function openTab(evt, tabName) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        evt.currentTarget.classList.add('active');
-        if (tabName === 'tab-line' && lineChartInstance) {
-            // Небольшая задержка, чтобы вкладка успела стать видимой
-            setTimeout(() => lineChartInstance.resize(), 50);
+    function logout() {
+        if (!confirm('Выйти из системы?')) return;
+        endSession(currentSessionId);
+        sessionStorage.removeItem(SESSION_KEY);
+        currentUser = null; currentSessionId = null;
+        document.body.classList.remove('is-admin');
+        stopSessionsTimer();
+        showLoginScreen();
+    }
+
+    document.getElementById('loginFio')?.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+    document.getElementById('loginPassword')?.addEventListener('keypress', e => { if (e.key === 'Enter') attemptLogin(); });
+
+    function openSection(sectionId, el) {
+        const adminOnlySections = ['authlog', 'sessions', 'users'];
+        const isRestricted = adminOnlySections.includes(sectionId);
+
+        document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('navReports')?.classList.add('active');
+
+        if (el) {
+            document.querySelectorAll('.sidebar .nav-item.sub-item').forEach(li => li.classList.remove('active'));
+            el.classList.add('active');
+        } else {
+            document.querySelectorAll('.sidebar .nav-item.sub-item').forEach(li => li.classList.toggle('active', li.dataset.section === sectionId));
         }
+
+        const sectionEl = document.getElementById('section-' + sectionId);
+        if (sectionEl) sectionEl.classList.add('active');
+
+        if (isRestricted && !isAdminUser()) {
+            const deniedEl = document.getElementById(sectionId + 'Denied');
+            const contentEl = document.getElementById(sectionId + 'Content');
+            if (deniedEl) deniedEl.style.display = 'flex';
+            if (contentEl) contentEl.style.display = 'none';
+        } else {
+            const deniedEl = document.getElementById(sectionId + 'Denied');
+            const contentEl = document.getElementById(sectionId + 'Content');
+            if (deniedEl) deniedEl.style.display = 'none';
+            if (contentEl) contentEl.style.display = 'flex';
+        }
+
+        const isReportSection = (sectionId === 'reports');
+        document.getElementById('toolbarActions').style.display = isReportSection ? 'flex' : 'none';
+        document.getElementById('historyInfo').style.display = isReportSection ? 'inline-flex' : 'none';
+
+        const titles = { 'reports': 'Отчет по заполнению', 'authlog': 'История авторизации', 'sessions': 'Пользователи', 'users': 'Управление пользователями' };
+        document.getElementById('pageTitle').textContent = titles[sectionId] || 'Отчет';
+
+        if (sectionId === 'authlog') renderAuthLog();
+        if (sectionId === 'sessions') renderSessions();
+        if (sectionId === 'users' && isAdminUser()) renderUsers();
+        if (sectionId === 'reports' && lineChartInstance) setTimeout(() => lineChartInstance.resize(), 50);
+    }
+
+    function switchSubTab(tabId, el) {
+        document.querySelectorAll('.subtab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+        const content = document.getElementById(tabId);
+        if (content) content.classList.add('active');
+        if (el) el.classList.add('active');
+        if (tabId === 'tab-line' && lineChartInstance) setTimeout(() => lineChartInstance.resize(), 50);
+    }
+
+    function renderAuthLog() {
+        const tbody = document.getElementById('authLogBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (authLog.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;padding:30px;">Пока нет записей</td></tr>'; return; }
+        [...authLog].reverse().forEach(rec => {
+            const tr = document.createElement('tr');
+            const cls = rec.status === 'success' ? 'success' : 'fail';
+            const icon = rec.status === 'success' ? 'fa-check-circle' : 'fa-times-circle';
+            const text = rec.status === 'success' ? 'Успешный вход' : 'Отказ';
+            tr.innerHTML = `<td>${rec.datetime}</td><td><strong>${rec.fio}</strong></td><td><span class="status-badge ${cls}"><i class="fas ${icon}"></i> ${text}</span></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderSessions() {
+        const tbody = document.getElementById('sessionsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (sessions.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:30px;">Пока нет сессий</td></tr>'; return; }
+        const sorted = [...sessions].sort((a, b) => b.loginTimestamp - a.loginTimestamp);
+        sorted.forEach(s => {
+            const u = users.find(x => x.fio === s.fio);
+            const password = u ? u.password : '—';
+            let durationText;
+            if (s.status === 'active') {
+                const sec = Math.round((Date.now() - s.loginTimestamp) / 1000);
+                durationText = `<span class="active-timer">${formatDuration(sec)}</span>`;
+            } else durationText = formatDuration(s.duration);
+            const statusCls = s.status === 'active' ? 'active' : 'ended';
+            const statusText = s.status === 'active' ? 'Активна' : 'Завершена';
+            const statusIcon = s.status === 'active' ? 'fa-circle' : 'fa-check-circle';
+            const isCurrentSession = (s.id === currentSessionId && s.status === 'active');
+            const logoutText = s.logoutTime ? s.logoutTime : (isCurrentSession ? '<em style="color:#1d4ed8;">— сейчас в системе —</em>' : '—');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${s.fio}</strong></td>
+                <td class="pwd-col"><span class="password-cell" data-pwd="${password}"><span class="password-masked">••••••</span><button class="password-toggle" onclick="togglePassword(this)"><i class="fas fa-eye"></i></button></span></td>
+                <td>${s.loginTime}</td><td>${logoutText}</td><td>${durationText}</td>
+                <td><span class="status-badge ${statusCls}"><i class="fas ${statusIcon}"></i> ${statusText}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function togglePassword(btn) {
+        const cell = btn.parentElement;
+        const masked = cell.querySelector('.password-masked');
+        const pwd = cell.dataset.pwd;
+        if (masked.textContent === '••••••') { masked.textContent = pwd; masked.classList.remove('password-masked'); btn.innerHTML = '<i class="fas fa-eye-slash"></i>'; }
+        else { masked.textContent = '••••••'; masked.classList.add('password-masked'); btn.innerHTML = '<i class="fas fa-eye"></i>'; }
+    }
+
+    function clearSessionsLog() {
+        if (!isAdminUser()) return;
+        if (!confirm('Удалить всю историю сессий?')) return;
+        sessions = sessions.filter(s => s.status === 'active' && s.id === currentSessionId);
+        saveSessions(); renderSessions();
+    }
+
+    function startSessionsTimer() {
+        stopSessionsTimer();
+        sessionsTimer = setInterval(() => {
+            const section = document.getElementById('section-sessions');
+            if (section && section.classList.contains('active') && isAdminUser()) renderSessions();
+        }, 1000);
+    }
+    function stopSessionsTimer() { if (sessionsTimer) { clearInterval(sessionsTimer); sessionsTimer = null; } }
+
+    function renderUsers() {
+        if (!isAdminUser()) return;
+        const tbody = document.getElementById('usersBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+            const isCurrent = currentUser?.fio === u.fio;
+            const isMainAdmin = u.fio === ADMIN_LOGIN;
+            tr.innerHTML = `
+                <td><strong>${u.fio}</strong>${isCurrent ? ' <em style="color:#2b7bf6;font-size:11px;">(вы)</em>' : ''}</td>
+                <td><span class="password-cell" data-pwd="${u.password}"><span class="password-masked">••••••</span><button class="password-toggle" onclick="togglePassword(this)"><i class="fas fa-eye"></i></button></span></td>
+                <td>${u.role === 'admin' ? '👑 Администратор' : 'Сотрудник (просмотр)'}</td>
+                <td>${u.createdAt || '—'}</td>
+                <td style="text-align:center;">
+                    <button class="action-btn edit" onclick="openUserModal('${u.fio}')"><i class="fas fa-pen"></i></button>
+                    ${!isMainAdmin ? `<button class="action-btn delete" onclick="deleteUser('${u.fio}')"><i class="fas fa-trash"></i></button>` : ''}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openUserModal(fio = null) {
+        if (!isAdminUser()) return;
+        editingUserFio = fio;
+        const modal = document.getElementById('userModal');
+        const title = document.getElementById('userModalTitle');
+        if (fio) {
+            const u = users.find(x => x.fio === fio);
+            if (!u) return;
+            title.textContent = 'Редактирование: ' + u.fio;
+            document.getElementById('userFio').value = u.fio;
+            document.getElementById('userPassword').value = u.password;
+            document.getElementById('userRole').value = u.role;
+            document.getElementById('userRole').disabled = (u.fio === ADMIN_LOGIN);
+        } else {
+            title.textContent = 'Новый пользователь';
+            document.getElementById('userFio').value = '';
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userRole').value = 'user';
+            document.getElementById('userRole').disabled = false;
+        }
+        modal.classList.add('active');
+    }
+
+    function closeUserModal() { document.getElementById('userModal').classList.remove('active'); editingUserFio = null; }
+
+    function saveUser() {
+        if (!isAdminUser()) return;
+        const fio = document.getElementById('userFio').value.trim();
+        const password = document.getElementById('userPassword').value;
+        const role = document.getElementById('userRole').value;
+        if (fio.length < 3) return alert('Введите логин (минимум 3 символа)');
+        if (password.length < 4) return alert('Пароль должен быть не менее 4 символов');
+        if (editingUserFio) {
+            if (editingUserFio !== fio && users.some(u => u.fio.toLowerCase() === fio.toLowerCase())) return alert('Пользователь с таким логином уже существует');
+            const u = users.find(x => x.fio === editingUserFio);
+            if (!u) return;
+            u.fio = fio; u.password = password;
+            if (editingUserFio !== ADMIN_LOGIN) u.role = role;
+            if (currentUser?.fio === editingUserFio) {
+                currentUser.fio = fio; currentUser.role = u.role;
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fio, sessionId: currentSessionId }));
+                document.getElementById('currentUserName').textContent = fio;
+                document.body.classList.toggle('is-admin', u.role === 'admin');
+            }
+        } else {
+            if (users.some(u => u.fio.toLowerCase() === fio.toLowerCase())) return alert('Пользователь с таким логином уже существует');
+            users.push({ fio, password, role, createdAt: new Date().toLocaleString('ru-RU') });
+        }
+        saveUsers(); closeUserModal(); renderUsers(); renderSessions();
+    }
+
+    function deleteUser(fio) {
+        if (!isAdminUser()) return;
+        if (fio === ADMIN_LOGIN) return alert('Нельзя удалить главного администратора');
+        if (fio === currentUser?.fio) return alert('Нельзя удалить самого себя');
+        if (!confirm(`Удалить пользователя ${fio}?`)) return;
+        users = users.filter(u => u.fio !== fio);
+        saveUsers(); renderUsers();
     }
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
+        if (!isAdminUser()) { e.target.value = ''; return alert('Загрузка доступна только администратору.'); }
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(event) {
             const data = new Uint8Array(event.target.result);
@@ -563,208 +813,107 @@
 
     function processFile(rows) {
         if (rows.length < 2) return alert('Файл пуст или неверного формата.');
-
         const headers = rows[0].map(h => String(h || '').trim().toLowerCase());
         let idxType = -1, idxDate = -1, idxQty = -1;
-
         headers.forEach((h, i) => {
             if (idxType === -1 && h.includes('тип') && h.includes('документ')) idxType = i;
             else if (idxDate === -1 && h.includes('дата')) idxDate = i;
             else if (idxQty === -1 && (h.includes('колич') || h === 'к-во' || h === 'кол-во')) idxQty = i;
         });
-
-        if (idxType === -1 || idxQty === -1) {
-            return alert('Ошибка: В файле не найдены колонки "тип документа" и "количество".');
-        }
-
+        if (idxType === -1 || idxQty === -1) return alert('Не найдены колонки "тип документа" и "количество".');
         const todayStr = getTodayString();
-        const groupedByDate = {};
-
+        const grouped = {};
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
-
             const typeRaw = String(row[idxType] || '').trim();
             const qty = Number(row[idxQty]) || 0;
             if (!typeRaw) continue;
-
             let dateStr = todayStr;
-            if (idxDate !== -1 && row[idxDate] !== undefined && row[idxDate] !== null && row[idxDate] !== '') {
+            if (idxDate !== -1 && row[idxDate] != null && row[idxDate] !== '') {
                 const parsed = formatDate(row[idxDate]);
                 if (parsed) dateStr = parsed;
             }
-
-            if (!groupedByDate[dateStr]) {
-                groupedByDate[dateStr] = {
-                    date: dateStr,
-                    total: 0,
-                    conformity: 0,
-                    declaration: 0,
-                    waiver: 0,
-                    voluntary: 0,
-                    stateReg: 0
-                };
-            }
-
-            const rec = groupedByDate[dateStr];
-            const firstChar = typeRaw.charAt(0);
-            if (firstChar === '1') rec.total = qty;
-            else if (firstChar === '2') rec.conformity = qty;
-            else if (firstChar === '3') rec.declaration = qty;
-            else if (firstChar === '4') rec.waiver = qty;
-            else if (firstChar === '5') rec.voluntary = qty;
-            else if (firstChar === '6') rec.stateReg = qty;
+            if (!grouped[dateStr]) grouped[dateStr] = { date: dateStr, total: 0, conformity: 0, declaration: 0, waiver: 0, voluntary: 0, stateReg: 0 };
+            const rec = grouped[dateStr];
+            const fc = typeRaw.charAt(0);
+            if (fc === '1') rec.total = qty;
+            else if (fc === '2') rec.conformity = qty;
+            else if (fc === '3') rec.declaration = qty;
+            else if (fc === '4') rec.waiver = qty;
+            else if (fc === '5') rec.voluntary = qty;
+            else if (fc === '6') rec.stateReg = qty;
         }
-
-        const newRecords = Object.values(groupedByDate);
+        const newRecords = Object.values(grouped);
         if (newRecords.length === 0) return alert('Не удалось распознать записи.');
-
-        let addedCount = 0;
-        let updatedCount = 0;
-
+        let addedCount = 0, updatedCount = 0;
         newRecords.forEach(newRec => {
             const existingIdx = historyData.findIndex(r => r.date === newRec.date);
-            if (existingIdx !== -1) {
-                historyData[existingIdx] = newRec;
-                updatedCount++;
-            } else {
-                historyData.push(newRec);
-                addedCount++;
-            }
+            if (existingIdx !== -1) { historyData[existingIdx] = newRec; updatedCount++; }
+            else { historyData.push(newRec); addedCount++; }
         });
-
         historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
-        saveHistory();
-        renderAll();
-
+        saveHistory(); renderAll();
         let msg = 'Данные загружены.\n';
         if (addedCount > 0) msg += `• Добавлено: ${addedCount}\n`;
         if (updatedCount > 0) msg += `• Обновлено: ${updatedCount}\n`;
-        msg += `\nВсего записей: ${historyData.length}`;
         alert(msg);
-    }
-
-    function getTodayString() {
-        const d = new Date();
-        return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-    }
-
-    function formatDate(val) {
-        if (val === null || val === undefined || val === '') return null;
-        if (typeof val === 'number') {
-            const d = new Date((val - 25569) * 86400 * 1000);
-            return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-        }
-        const str = String(val).trim();
-        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) return str;
-        const d = new Date(str);
-        if (!isNaN(d.getTime())) {
-            return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-        }
-        return str;
-    }
-
-    function parseRuDate(str) {
-        const parts = str.split('.');
-        if (parts.length !== 3) return 0;
-        return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
-    }
-
-    function isValidRuDate(str) {
-        if (!/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) return false;
-        const [d, m, y] = str.split('.').map(Number);
-        if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) return false;
-        const date = new Date(y, m - 1, d);
-        return date.getDate() === d && date.getMonth() === m - 1 && date.getFullYear() === y;
     }
 
     function getPercentWithDocs(rec) {
         if (!rec.total || rec.total <= 0) return 0;
-        const sumAllDocs = rec.conformity + rec.declaration + rec.waiver + rec.voluntary + rec.stateReg;
-        return (sumAllDocs / rec.total) * 100;
+        return ((rec.conformity + rec.declaration + rec.waiver + rec.voluntary + rec.stateReg) / rec.total) * 100;
     }
 
     function renderProgressCell(current, previous, options = {}) {
         const { isPercent = false } = options;
         let html = `<div class="cell-value">${isPercent ? current.toFixed(2) + '%' : current.toLocaleString('ru-RU')}</div>`;
-
-        if (previous === null || previous === undefined) {
-            return html + `<div class="cell-delta neutral"><i class="fas fa-minus"></i><span>первый срез</span></div>`;
-        }
-
+        if (previous === null || previous === undefined) return html + `<div class="cell-delta neutral"><i class="fas fa-minus"></i><span>первый срез</span></div>`;
         const delta = current - previous;
         const isZero = Math.abs(delta) < (isPercent ? 0.005 : 0.5);
-        if (isZero) {
-            return html + `<div class="cell-delta neutral"><i class="fas fa-equals"></i><span>без изменений</span></div>`;
-        }
-
-        const isPositive = delta > 0;
-        const badgeClass = isPositive ? 'positive' : 'negative';
-        const arrowIcon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
-        const sign = isPositive ? '+' : '−';
+        if (isZero) return html + `<div class="cell-delta neutral"><i class="fas fa-equals"></i><span>без изменений</span></div>`;
+        const isPos = delta > 0;
+        const badge = isPos ? 'positive' : 'negative';
+        const arrow = isPos ? 'fa-arrow-up' : 'fa-arrow-down';
+        const sign = isPos ? '+' : '−';
         const absDelta = Math.abs(delta);
         const deltaStr = isPercent ? absDelta.toFixed(2) + '%' : Math.round(absDelta).toLocaleString('ru-RU');
-
-        let percentChange = '';
-        if (previous !== 0) {
-            const pct = (delta / previous) * 100;
-            const signPct = delta > 0 ? '+' : '−';
-            percentChange = `<span class="delta-percent">(${signPct}${Math.abs(pct).toFixed(1)}%)</span>`;
-        } else if (delta > 0) {
-            percentChange = `<span class="delta-percent">(new)</span>`;
-        }
-
-        return html + `<div class="cell-delta ${badgeClass}">
-            <i class="fas ${arrowIcon}"></i>
-            <span class="delta-value">${sign}${deltaStr}</span>
-            ${percentChange}
-        </div>`;
+        let pctChange = '';
+        if (previous !== 0) { const pct = (delta / previous) * 100; pctChange = `<span class="delta-percent">(${isPos ? '+' : '−'}${Math.abs(pct).toFixed(1)}%)</span>`; }
+        else if (delta > 0) pctChange = `<span class="delta-percent">(new)</span>`;
+        return html + `<div class="cell-delta ${badge}"><i class="fas ${arrow}"></i><span class="delta-value">${sign}${deltaStr}</span>${pctChange}</div>`;
     }
 
     function renderAll() {
         const emptyState = document.getElementById('emptyState');
-        const tabsHeader = document.getElementById('tabsHeader');
         const historyInfo = document.getElementById('historyInfo');
-
         if (historyData.length === 0) {
             emptyState.style.display = 'flex';
-            tabsHeader.style.display = 'none';
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            historyInfo.innerHTML = '<i class="fas fa-info-circle"></i><span>Загрузите Excel-файл или добавьте запись вручную.</span>';
+            historyInfo.innerHTML = '<i class="fas fa-info-circle"></i><span>Отчёт пуст. Данные может загрузить только администратор.</span>';
             if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; }
             return;
         }
-
         emptyState.style.display = 'none';
-        tabsHeader.style.display = 'flex';
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-table').classList.add('active');
-        document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
-
         const firstDate = historyData[0].date;
         const lastDate = historyData[historyData.length - 1].date;
-        historyInfo.innerHTML = `<i class="fas fa-history"></i><span>Записей: <strong>${historyData.length}</strong>. Период: <strong>${firstDate}</strong> — <strong>${lastDate}</strong>.</span>`;
-
-        renderTable();
-        renderLineChart();
+        const mode = isAdminUser() ? '' : ' <span style="color:#6b7280;">(режим просмотра)</span>';
+        historyInfo.innerHTML = `<i class="fas fa-history"></i><span>Записей: <strong>${historyData.length}</strong>. Период: <strong>${firstDate}</strong> — <strong>${lastDate}</strong>.${mode}</span>`;
+        renderTable(); renderLineChart();
     }
 
     function renderTable() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-
+        const admin = isAdminUser();
         const sortedAsc = [...historyData].sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
         const sortedDesc = [...sortedAsc].reverse();
-
         sortedDesc.forEach(rec => {
             const idxInAsc = sortedAsc.findIndex(r => r.date === rec.date);
             const prev = idxInAsc > 0 ? sortedAsc[idxInAsc - 1] : null;
-
             const percentCur = getPercentWithDocs(rec);
             const percentPrev = prev ? getPercentWithDocs(prev) : null;
-
             const tr = document.createElement('tr');
-            tr.innerHTML = `
+            let html = `
                 <td><div class="cell-value">${rec.date}</div></td>
                 <td>${renderProgressCell(rec.total, prev ? prev.total : null)}</td>
                 <td>${renderProgressCell(rec.conformity, prev ? prev.conformity : null)}</td>
@@ -773,28 +922,24 @@
                 <td>${renderProgressCell(rec.voluntary, prev ? prev.voluntary : null)}</td>
                 <td>${renderProgressCell(rec.stateReg, prev ? prev.stateReg : null)}</td>
                 <td class="highlight-percent">${renderProgressCell(percentCur, percentPrev, { isPercent: true })}</td>
-                <td class="actions-cell">
-                    <button class="action-btn edit" title="Редактировать" onclick="openEditModal('${rec.date}')">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <button class="action-btn delete" title="Удалить" onclick="deleteRecord('${rec.date}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
             `;
+            if (admin) {
+                html += `<td class="actions-cell actions-col">
+                    <button class="action-btn edit" onclick="openEditModal('${rec.date}')"><i class="fas fa-pen"></i></button>
+                    <button class="action-btn delete" onclick="deleteRecord('${rec.date}')"><i class="fas fa-trash"></i></button>
+                </td>`;
+            }
+            tr.innerHTML = html;
             tbody.appendChild(tr);
         });
-
         initTableColumns();
     }
 
     function openEditModal(date) {
+        if (!isAdminUser()) return;
         const rec = historyData.find(r => r.date === date);
         if (!rec) return;
-
-        isEditMode = true;
-        editingOriginalDate = date;
-
+        isEditMode = true; editingOriginalDate = date;
         document.getElementById('modalTitle').textContent = 'Редактирование записи от ' + date;
         document.getElementById('editDate').value = rec.date;
         document.getElementById('editTotal').value = rec.total;
@@ -803,14 +948,12 @@
         document.getElementById('editWaiver').value = rec.waiver;
         document.getElementById('editVoluntary').value = rec.voluntary;
         document.getElementById('editStateReg').value = rec.stateReg;
-
         document.getElementById('editModal').classList.add('active');
     }
 
     function openAddModal() {
-        isEditMode = false;
-        editingOriginalDate = null;
-
+        if (!isAdminUser()) return;
+        isEditMode = false; editingOriginalDate = null;
         document.getElementById('modalTitle').textContent = 'Новая запись';
         document.getElementById('editDate').value = getTodayString();
         document.getElementById('editTotal').value = 0;
@@ -819,25 +962,16 @@
         document.getElementById('editWaiver').value = 0;
         document.getElementById('editVoluntary').value = 0;
         document.getElementById('editStateReg').value = 0;
-
         document.getElementById('editModal').classList.add('active');
         setTimeout(() => document.getElementById('editDate').focus(), 100);
     }
 
-    function closeModal() {
-        document.getElementById('editModal').classList.remove('active');
-        editingOriginalDate = null;
-        isEditMode = false;
-    }
+    function closeModal() { document.getElementById('editModal').classList.remove('active'); editingOriginalDate = null; isEditMode = false; }
 
     function saveEdit() {
+        if (!isAdminUser()) return;
         const newDate = document.getElementById('editDate').value.trim();
-
-        if (!isValidRuDate(newDate)) {
-            alert('Некорректная дата. Введите в формате ДД.ММ.ГГГГ (например, 31.12.2026).');
-            return;
-        }
-
+        if (!isValidRuDate(newDate)) return alert('Некорректная дата. ДД.ММ.ГГГГ.');
         const newRecord = {
             date: newDate,
             total: Number(document.getElementById('editTotal').value) || 0,
@@ -847,85 +981,67 @@
             voluntary: Number(document.getElementById('editVoluntary').value) || 0,
             stateReg: Number(document.getElementById('editStateReg').value) || 0
         };
-
         if (isEditMode) {
             if (newDate !== editingOriginalDate && historyData.some(r => r.date === newDate)) {
-                if (!confirm(`Запись с датой ${newDate} уже существует. Перезаписать её?`)) return;
+                if (!confirm(`Запись с датой ${newDate} уже существует. Перезаписать?`)) return;
                 historyData = historyData.filter(r => r.date !== newDate);
             }
-
-            const recIdx = historyData.findIndex(r => r.date === editingOriginalDate);
-            if (recIdx === -1) { closeModal(); return; }
-            historyData[recIdx] = newRecord;
+            const idx = historyData.findIndex(r => r.date === editingOriginalDate);
+            if (idx === -1) { closeModal(); return; }
+            historyData[idx] = newRecord;
         } else {
             if (historyData.some(r => r.date === newDate)) {
-                if (!confirm(`Запись с датой ${newDate} уже существует. Перезаписать её?`)) return;
+                if (!confirm(`Запись с датой ${newDate} уже существует. Перезаписать?`)) return;
                 historyData = historyData.filter(r => r.date !== newDate);
             }
             historyData.push(newRecord);
         }
-
         historyData.sort((a, b) => parseRuDate(a.date) - parseRuDate(b.date));
-        saveHistory();
-        closeModal();
-        renderAll();
+        saveHistory(); closeModal(); renderAll();
     }
 
     function deleteRecord(date) {
-        if (!confirm(`Удалить запись за ${date}? Действие необратимо.`)) return;
+        if (!isAdminUser()) return;
+        if (!confirm(`Удалить запись за ${date}?`)) return;
         historyData = historyData.filter(r => r.date !== date);
-        saveHistory();
-        renderAll();
+        saveHistory(); renderAll();
     }
 
-    document.getElementById('editModal').addEventListener('click', (e) => {
-        if (e.target.id === 'editModal') closeModal();
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
-    });
+    document.getElementById('editModal').addEventListener('click', e => { if (e.target.id === 'editModal') closeModal(); });
+    document.getElementById('userModal').addEventListener('click', e => { if (e.target.id === 'userModal') closeUserModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeUserModal(); } });
 
     function initTableColumns() {
         const table = document.getElementById('reportTable');
         const colgroup = document.getElementById('tableColgroup');
         const ths = table.querySelectorAll('thead th');
-
+        const admin = isAdminUser();
         colgroup.innerHTML = '';
         ths.forEach((th, i) => {
+            if (!admin && th.classList.contains('actions-col')) return;
             const col = document.createElement('col');
             col.style.width = (INITIAL_COL_WIDTHS[i] || 150) + 'px';
             colgroup.appendChild(col);
         });
-
         ths.forEach((th, i) => {
-            if (i === ths.length - 1) return;
-
-            const old = th.querySelector('.resizer');
-            if (old) old.remove();
-
+            if (!admin && th.classList.contains('actions-col')) return;
+            if (i === ths.length - 1 && !admin) return;
+            const old = th.querySelector('.resizer'); if (old) old.remove();
             const resizer = document.createElement('div');
             resizer.className = 'resizer';
             th.appendChild(resizer);
-
-            resizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const col = colgroup.children[i];
+            resizer.addEventListener('mousedown', e => {
+                e.preventDefault(); e.stopPropagation();
+                const visibleThs = Array.from(ths).filter(t => admin || !t.classList.contains('actions-col'));
+                const colIdx = visibleThs.indexOf(th);
+                const col = colgroup.children[colIdx];
+                if (!col) return;
                 const startX = e.pageX;
                 const startWidth = th.getBoundingClientRect().width;
-
                 resizer.classList.add('active');
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
-
-                const onMove = (ev) => {
-                    const diff = ev.pageX - startX;
-                    const newWidth = Math.max(80, startWidth + diff);
-                    col.style.width = newWidth + 'px';
-                };
-
+                const onMove = ev => { col.style.width = Math.max(80, startWidth + ev.pageX - startX) + 'px'; };
                 const onUp = () => {
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
@@ -933,29 +1049,8 @@
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
                 };
-
                 document.addEventListener('mousemove', onMove);
                 document.addEventListener('mouseup', onUp);
-            });
-
-            resizer.addEventListener('dblclick', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const col = colgroup.children[i];
-
-                const cells = table.querySelectorAll(`tr > *:nth-child(${i + 1})`);
-                let maxWidth = 80;
-                cells.forEach(cell => {
-                    const span = document.createElement('span');
-                    span.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:' + getComputedStyle(cell).font;
-                    const valueEl = cell.querySelector('.cell-value');
-                    span.textContent = valueEl ? valueEl.textContent : cell.textContent;
-                    document.body.appendChild(span);
-                    maxWidth = Math.max(maxWidth, span.offsetWidth);
-                    document.body.removeChild(span);
-                });
-
-                col.style.width = (maxWidth + 30) + 'px';
             });
         });
     }
@@ -964,68 +1059,23 @@
         const ctx = document.getElementById('lineChart').getContext('2d');
         const labels = historyData.map(d => d.date);
         const dataPoints = historyData.map(d => getPercentWithDocs(d).toFixed(2));
-
         const maxVal = Math.max(...dataPoints.map(Number), 10);
         const maxY = Math.ceil(maxVal / 5) * 5 + 5;
-
         if (lineChartInstance) lineChartInstance.destroy();
-
         lineChartInstance = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '% Товаров с документацией',
-                    data: dataPoints,
-                    borderColor: '#2ecc71',
-                    backgroundColor: '#2ecc71',
-                    borderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    tension: 0.3
-                }]
-            },
+            data: { labels, datasets: [{ label: '% Товаров с документацией', data: dataPoints, borderColor: '#2ecc71', backgroundColor: '#2ecc71', borderWidth: 2, pointRadius: 5, pointHoverRadius: 7, tension: 0.3 }] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: {
-                    title: {
-                        display: true,
-                        text: '% Товаров с разрешительной документацией',
-                        font: { size: 16, weight: 'bold', style: 'italic' }
-                    },
+                    title: { display: true, text: '% Товаров с разрешительной документацией', font: { size: 16, weight: 'bold', style: 'italic' } },
                     legend: { display: false },
-                    datalabels: {
-                        align: 'top',
-                        anchor: 'end',
-                        color: '#ff00ff',
-                        font: { weight: 'bold', size: 11 },
-                        formatter: v => v + '%'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const rec = historyData[context.dataIndex];
-                                const sumAll = rec.conformity + rec.declaration + rec.waiver + rec.voluntary + rec.stateReg;
-                                return [
-                                    `Процент: ${context.parsed.y}%`,
-                                    `Документов: ${sumAll.toLocaleString('ru-RU')} из ${rec.total.toLocaleString('ru-RU')}`
-                                ];
-                            }
-                        }
-                    }
+                    datalabels: { align: 'top', anchor: 'end', color: '#ff00ff', font: { weight: 'bold', size: 11 }, formatter: v => v + '%' },
+                    tooltip: { callbacks: { label: c => { const rec = historyData[c.dataIndex]; const sum = rec.conformity + rec.declaration + rec.waiver + rec.voluntary + rec.stateReg; return [`Процент: ${c.parsed.y}%`, `Документов: ${sum.toLocaleString('ru-RU')} из ${rec.total.toLocaleString('ru-RU')}`]; } } }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: maxY,
-                        ticks: { callback: v => v.toFixed(2) + '%' },
-                        grid: { color: '#e5e7eb' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { maxRotation: 45, minRotation: 45 }
-                    }
+                    y: { beginAtZero: true, max: maxY, ticks: { callback: v => v.toFixed(2) + '%' }, grid: { color: '#e5e7eb' } },
+                    x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } }
                 }
             }
         });
