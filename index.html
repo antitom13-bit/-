@@ -46,9 +46,7 @@
         .points-negative { color: #9c0006; background-color: #ffc7ce !important; }
         .invalid-team { background-color: #ffcccc !important; color: #990000; font-weight: bold; }
         .bg-denis { background-color: #cce0e6; } .bg-anton { background-color: #fce4d6; } .bg-valeriy { background-color: #fdf1cb; } .bg-ruslan { background-color: #e2b8b8; } .bg-nastya { background-color: #e6a8a8; }
-        .bg-gitai { background-color: #e1bee7; }
         .bg-denis-cell { background-color: #e6f2f5; } .bg-anton-cell { background-color: #fef4ee; } .bg-valeriy-cell { background-color: #fff9e6; } .bg-ruslan-cell { background-color: #f4e1e1; } .bg-nastya-cell { background-color: #f5d6d6; }
-        .bg-gitai-cell { background-color: #f3e5f5; }
         tr.match-row.row-archived-past, tr.match-row.row-archived-future { display: none; }
         #table-body.show-past tr.match-row.row-archived-past { display: table-row; opacity: 0.55; }
         #table-body.show-past tr.match-row.row-archived-past input, #table-body.show-past tr.match-row.row-archived-past select { color: #777; }
@@ -66,7 +64,6 @@
         .leaderboard-table th, .leaderboard-table td, .rules-table th, .rules-table td { border: 1px solid #c0c0c0; padding: 12px 18px; text-align: center; font-size: 13px; }
         .leaderboard-table th, .rules-table th { background-color: #f2f2f2; font-weight: bold; }
         .place-1 { background-color: #d9ead3; } .place-2 { background-color: #fce5cd; } .place-3 { background-color: #d0e0e3; }
-        .place-ai { background-color: #f3e5f5; }
         .icon-cell { font-size: 22px; width: 45px; }
         .total-score { font-weight: bold; font-size: 15px; }
         .rules-table td:first-child { font-weight: bold; width: 100px; background-color: #fafafa; }
@@ -238,6 +235,20 @@
         .date-selector { padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; }
         .date-selector:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.15); }
         .records-quote { margin-top: 12px; padding: 10px 14px; background: #f8f9fa; border-left: 3px solid #7f8c8d; border-radius: 4px; font-size: 12px; font-style: italic; color: #555; }
+        /* Модальное окно AI-прогнозов */
+        .ai-info-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+        .ai-info-modal-overlay.active { display: flex; }
+        .ai-info-modal { background: #fff; border-radius: 8px; padding: 24px; width: 90%; max-width: 640px; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.3); }
+        .ai-info-modal h3 { margin: 0 0 12px 0; color: #2c3e50; }
+        .ai-info-modal .ai-info-sub { color: #666; font-size: 12px; margin-bottom: 16px; }
+        .ai-info-match { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .ai-info-match:last-child { border-bottom: none; }
+        .ai-info-match .ai-date { color: #888; font-size: 12px; min-width: 80px; }
+        .ai-info-match .ai-teams { flex: 1; font-weight: 500; }
+        .ai-info-match .ai-score { font-weight: bold; font-size: 15px; color: #9C27B0; background: #f3e5f5; padding: 3px 12px; border-radius: 4px; }
+        .ai-info-empty { text-align: center; color: #888; padding: 24px; font-style: italic; }
+        .ai-info-close { display: block; width: 100%; margin-top: 16px; padding: 10px; background: #9C27B0; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .ai-info-close:hover { background: #7B1FA2; }
     </style>
 </head>
 <body>
@@ -274,7 +285,7 @@
                 <button class="btn btn-template" onclick="downloadTemplate()">📤 Скачать шаблон Excel</button>
                 <button class="btn btn-upload" onclick="document.getElementById('excel-upload').click()">📥 Загрузить прогнозы из Excel</button>
                 <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display: none;" onchange="handleFileUpload(event)">
-                <button class="btn btn-ai" onclick="manualGitaiRefresh()" title="Пересчитать прогнозы GIT-hub AI на завтрашние матчи">🤖 Прогнозы ИИ на завтра</button>
+                <button class="btn btn-ai" onclick="showAIPredictions()" title="Показать прогнозы ИИ на завтрашние матчи">🤖 Прогнозы ИИ на завтра</button>
                 <button class="btn btn-backup" onclick="exportBackup()" title="Сохранить полный бэкап (все матчи, результаты и прогнозы)">💾 Экспорт (бэкап)</button>
                 <button class="btn btn-add" onclick="addNewRow()">+ Добавить матч</button>
                 <button class="btn btn-clear" onclick="clearAllData()">Очистить всё</button>
@@ -300,12 +311,10 @@
                             <th colspan="3" class="bg-valeriy">Валерий<br><span id="pct-valeriy" style="font-size: 11px; color: #555;">0,0%</span></th>
                             <th colspan="3" class="bg-ruslan">Руслан<br><span id="pct-ruslan" style="font-size: 11px; color: #555;">0,0%</span></th>
                             <th colspan="3" class="bg-nastya">Настя<br><span id="pct-nastya" style="font-size: 11px; color: #555;">0,0%</span></th>
-                            <th colspan="3" class="bg-gitai">🤖 GIT-hub AI<br><span id="pct-gitai" style="font-size: 11px; color: #555;">0,0%</span></th>
                             <th rowspan="2" style="width: 30px;"></th>
                         </tr>
                         <tr>
                             <th>Хоз</th><th>Гост</th><th>Тип</th><th>Хоз</th><th>Гост</th>
-                            <th>Голы<br>хоз</th><th>Голы<br>гост</th><th>Очки</th>
                             <th>Голы<br>хоз</th><th>Голы<br>гост</th><th>Очки</th>
                             <th>Голы<br>хоз</th><th>Голы<br>гост</th><th>Очки</th>
                             <th>Голы<br>хоз</th><th>Голы<br>гост</th><th>Очки</th>
@@ -384,7 +393,6 @@
                             <tr class="place-3"><td>Коморин Валерий</td><td><span id="total-valeriy" class="total-score">0</span><span id="breakdown-valeriy" class="bonus-breakdown"></span></td><td>3 место</td><td class="icon-cell">💐</td></tr>
                             <tr class="place-3"><td>Коморин Руслан</td><td><span id="total-ruslan" class="total-score">0</span><span id="breakdown-ruslan" class="bonus-breakdown"></span></td><td>3 место</td><td class="icon-cell">💐</td></tr>
                             <tr><td>Коморина Анастасия</td><td><span id="total-nastya" class="total-score">0</span><span id="breakdown-nastya" class="bonus-breakdown"></span></td><td></td><td class="icon-cell">🍓</td></tr>
-                            <tr class="place-ai"><td>🤖 GIT-hub AI</td><td><span id="total-gitai" class="total-score">0</span><span id="breakdown-gitai" class="bonus-breakdown"></span></td><td></td><td class="icon-cell">🤖</td></tr>
                         </tbody>
                     </table>
                     <div class="rules-note" style="text-align:left; padding:8px 15px; font-size:11px; color:#666;">
@@ -462,6 +470,16 @@
     </main>
 </div>
 
+<!-- Модальное окно AI-прогнозов -->
+<div class="ai-info-modal-overlay" id="ai-info-modal-overlay">
+    <div class="ai-info-modal">
+        <h3>🤖 Прогнозы GIT-hub AI на завтра</h3>
+        <div class="ai-info-sub" id="ai-info-date"></div>
+        <div id="ai-info-content"></div>
+        <button class="ai-info-close" onclick="closeAIInfo()">Закрыть</button>
+    </div>
+</div>
+
 <script>
     if (typeof ChartDataLabels !== 'undefined') {
         Chart.register(ChartDataLabels);
@@ -517,7 +535,10 @@
         'ХК Сочи': 'Сочи',
         'хк сочи': 'Сочи',
         'Ак Bars': 'Ак Барс',
-        'ак bars': 'Ак Барс'
+        'ак bars': 'Ак Барс',
+        'Куньлунь Ред Стар': 'Драконы',
+        'Куньлунь РС': 'Драконы',
+        'Куньлунь': 'Драконы'
     };
     function normalizeTeamName(name) {
         if (name === null || name === undefined) return '';
@@ -530,7 +551,7 @@
 
     let showPastMatches = false;
     let showFutureMatches = false;
-    let mainForecastTotals = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+    let mainForecastTotals = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
 
     function parseDateToObj(str) {
         if (!str) return null;
@@ -994,9 +1015,9 @@
     }
 
     let analyticsChart = null;
-    const chartPlayers = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya', 'gitai'];
-    const chartPlayerNames = { denis: 'Денис', anton: 'Антон', valeriy: 'Валерий', ruslan: 'Руслан', nastya: 'Настя', gitai: '🤖 GIT-hub AI' };
-    const chartColors = { denis: '#2196F3', anton: '#F44336', valeriy: '#FFC107', ruslan: '#4CAF50', nastya: '#FF9800', gitai: '#9C27B0' };
+    const chartPlayers = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya'];
+    const chartPlayerNames = { denis: 'Денис', anton: 'Антон', valeriy: 'Валерий', ruslan: 'Руслан', nastya: 'Настя' };
+    const chartColors = { denis: '#2196F3', anton: '#F44336', valeriy: '#FFC107', ruslan: '#4CAF50', nastya: '#FF9800' };
 
     function buildAnalyticsData() {
         const rows = document.querySelectorAll('#table-body .match-row');
@@ -1031,8 +1052,8 @@
             return da - db;
         });
         const labels = [];
-        const cumulative = { denis: [], anton: [], valeriy: [], ruslan: [], nastya: [], gitai: [] };
-        const sums = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+        const cumulative = { denis: [], anton: [], valeriy: [], ruslan: [], nastya: [] };
+        const sums = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
         completedMatches.forEach(match => {
             labels.push(`${match.date}  ${match.home} – ${match.away}`);
             chartPlayers.forEach(p => {
@@ -1104,8 +1125,8 @@
         }
     }
 
-    const recordsPlayers = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya', 'gitai'];
-    const recordsNames = { denis: 'Денис', anton: 'Антон', valeriy: 'Валерий', ruslan: 'Руслан', nastya: 'Настя', gitai: '🤖 GIT-hub AI' };
+    const recordsPlayers = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya'];
+    const recordsNames = { denis: 'Денис', anton: 'Антон', valeriy: 'Валерий', ruslan: 'Руслан', nastya: 'Настя' };
 
     function collectCompletedMatchesWithPoints() {
         const matches = [];
@@ -1189,7 +1210,7 @@
         });
         const avgHome = (totalHomeGoals / matches.length).toFixed(1);
         const avgAway = (totalAwayGoals / matches.length).toFixed(1);
-        const dayPoints = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+        const dayPoints = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
         matches.forEach(m => { recordsPlayers.forEach(p => { const v = m.points[p]; if (v !== '' && v !== null && !isNaN(v)) dayPoints[p] += Number(v); }); });
         const bestPts = Math.max(...Object.values(dayPoints));
         const bestPlayers = recordsPlayers.filter(p => dayPoints[p] === bestPts);
@@ -1221,7 +1242,7 @@
         const allMatches = collectCompletedMatchesWithPoints();
         const matches = allMatches.filter(m => getWeekKey(m.dateObj) === weekKey);
         if (matches.length === 0) { container.innerHTML = '<div class="record-empty">На этой неделе нет матчей</div>'; return; }
-        const weekPoints = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+        const weekPoints = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
         matches.forEach(m => { recordsPlayers.forEach(p => { const v = m.points[p]; if (v !== '' && v !== null && !isNaN(v)) weekPoints[p] += Number(v); }); });
         const sorted = recordsPlayers.slice().sort((a, b) => weekPoints[b] - weekPoints[a]);
         const champion = sorted[0];
@@ -1250,7 +1271,7 @@
         const allMatches = collectCompletedMatchesWithPoints();
         const matches = allMatches.filter(m => m.dateObj.getFullYear() === year && (m.dateObj.getMonth() + 1) === monthNum);
         if (matches.length === 0) { container.innerHTML = '<div class="record-empty">В этом месяце нет матчей</div>'; return; }
-        const monthPoints = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+        const monthPoints = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
         matches.forEach(m => { recordsPlayers.forEach(p => { const v = m.points[p]; if (v !== '' && v !== null && !isNaN(v)) monthPoints[p] += Number(v); }); });
         const sorted = recordsPlayers.slice().sort((a, b) => monthPoints[b] - monthPoints[a]);
         const champion = sorted[0];
@@ -1280,7 +1301,7 @@
         let bestRecord = { player: null, date: null, points: -Infinity };
         let worstRecord = { player: null, date: null, points: Infinity };
         Object.entries(byDay).forEach(([date, matches]) => {
-            const dayPts = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+            const dayPts = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
             matches.forEach(m => { recordsPlayers.forEach(p => { const v = m.points[p]; if (v !== '' && v !== null && !isNaN(v)) dayPts[p] += Number(v); }); });
             recordsPlayers.forEach(p => {
                 if (dayPts[p] > bestRecord.points) bestRecord = { player: p, date, points: dayPts[p] };
@@ -1316,35 +1337,35 @@
 
     const westTeams = ['Лада', 'Динамо-Минск', 'Драконы', 'Локомотив', 'Северсталь', 'СКА', 'Сочи', 'Спартак', 'Торпедо', 'ХК Динамо-Москва', 'ЦСКА'];
     const eastTeams = ['Авангард', 'Автомобилист', 'Адмирал', 'Ак Барс', 'Амур', 'Барыс', 'Салават Юлаев', 'Металлург', 'Нефтехимик', 'Сибирь', 'Трактор'];
-    const players = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya', 'gitai'];
-    const playerNames = { denis: 'Денис', anton: 'Антон', valeriy: 'Валерий', ruslan: 'Руслан', nastya: 'Настя', gitai: '🤖 GIT-hub AI' };
+    const players = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya'];
+    const playerNames = { denis: 'Денис', anton: 'Антон', valeriy: 'Валерий', ruslan: 'Руслан', nastya: 'Настя' };
 
     const defaultPlayoffData = {
         west: [
-            { team: 'Лада', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет', gitai: '' },
-            { team: 'Динамо-Минск', fact: '', denis: '5', anton: '6', valeriy: '3', ruslan: '5', nastya: '6', gitai: '' },
-            { team: 'Драконы', fact: '', denis: '8', anton: '7', valeriy: 'не пройдет', ruslan: '8', nastya: '8', gitai: '' },
-            { team: 'Локомотив', fact: '', denis: '2', anton: '2', valeriy: '1', ruslan: '1', nastya: '1', gitai: '' },
-            { team: 'Северсталь', fact: '', denis: '7', anton: 'не пройдет', valeriy: '8', ruslan: '7', nastya: '7', gitai: '' },
-            { team: 'СКА', fact: '', denis: '3', anton: '1', valeriy: '4', ruslan: '3', nastya: '2', gitai: '' },
-            { team: 'Сочи', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет', gitai: '' },
-            { team: 'Спартак', fact: '', denis: '6', anton: '5', valeriy: '7', ruslan: '6', nastya: '4', gitai: '' },
-            { team: 'Торпедо', fact: '', denis: 'не пройдет', anton: '8', valeriy: '6', ruslan: 'не пройдет', nastya: 'не пройдет', gitai: '' },
-            { team: 'ХК Динамо-Москва', fact: '', denis: '4', anton: '4', valeriy: '5', ruslan: '4', nastya: '3', gitai: '' },
-            { team: 'ЦСКА', fact: '', denis: '1', anton: '3', valeriy: '2', ruslan: '2', nastya: '5', gitai: '' }
+            { team: 'Лада', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет' },
+            { team: 'Динамо-Минск', fact: '', denis: '5', anton: '6', valeriy: '3', ruslan: '5', nastya: '6' },
+            { team: 'Драконы', fact: '', denis: '8', anton: '7', valeriy: 'не пройдет', ruslan: '8', nastya: '8' },
+            { team: 'Локомотив', fact: '', denis: '2', anton: '2', valeriy: '1', ruslan: '1', nastya: '1' },
+            { team: 'Северсталь', fact: '', denis: '7', anton: 'не пройдет', valeriy: '8', ruslan: '7', nastya: '7' },
+            { team: 'СКА', fact: '', denis: '3', anton: '1', valeriy: '4', ruslan: '3', nastya: '2' },
+            { team: 'Сочи', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет' },
+            { team: 'Спартак', fact: '', denis: '6', anton: '5', valeriy: '7', ruslan: '6', nastya: '4' },
+            { team: 'Торпедо', fact: '', denis: 'не пройдет', anton: '8', valeriy: '6', ruslan: 'не пройдет', nastya: 'не пройдет' },
+            { team: 'ХК Динамо-Москва', fact: '', denis: '4', anton: '4', valeriy: '5', ruslan: '4', nastya: '3' },
+            { team: 'ЦСКА', fact: '', denis: '1', anton: '3', valeriy: '2', ruslan: '2', nastya: '5' }
         ],
         east: [
-            { team: 'Авангард', fact: '', denis: '2', anton: '2', valeriy: '1', ruslan: '1', nastya: '3', gitai: '' },
-            { team: 'Автомобилист', fact: '', denis: '5', anton: '3', valeriy: '6', ruslan: '3', nastya: '4', gitai: '' },
-            { team: 'Адмирал', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет', gitai: '' },
-            { team: 'Ак Барс', fact: '', denis: '1', anton: '4', valeriy: '3', ruslan: '4', nastya: '7', gitai: '' },
-            { team: 'Амур', fact: '', denis: '7', anton: 'не пройдет', valeriy: '8', ruslan: '7', nastya: 'не пройдет', gitai: '' },
-            { team: 'Барыс', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет', gitai: '' },
-            { team: 'Салават Юлаев', fact: '', denis: '4', anton: '6', valeriy: '4', ruslan: '5', nastya: '2', gitai: '' },
-            { team: 'Металлург', fact: '', denis: '3', anton: '1', valeriy: '2', ruslan: '2', nastya: '1', gitai: '' },
-            { team: 'Нефтехимик', fact: '', denis: 'не пройдет', anton: '8', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: '8', gitai: '' },
-            { team: 'Сибирь', fact: '', denis: '8', anton: '7', valeriy: '7', ruslan: '8', nastya: '6', gitai: '' },
-            { team: 'Трактор', fact: '', denis: '6', anton: '5', valeriy: '5', ruslan: '6', nastya: '5', gitai: '' }
+            { team: 'Авангард', fact: '', denis: '2', anton: '2', valeriy: '1', ruslan: '1', nastya: '3' },
+            { team: 'Автомобилист', fact: '', denis: '5', anton: '3', valeriy: '6', ruslan: '3', nastya: '4' },
+            { team: 'Адмирал', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет' },
+            { team: 'Ак Барс', fact: '', denis: '1', anton: '4', valeriy: '3', ruslan: '4', nastya: '7' },
+            { team: 'Амур', fact: '', denis: '7', anton: 'не пройдет', valeriy: '8', ruslan: '7', nastya: 'не пройдет' },
+            { team: 'Барыс', fact: '', denis: 'не пройдет', anton: 'не пройдет', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: 'не пройдет' },
+            { team: 'Салават Юлаев', fact: '', denis: '4', anton: '6', valeriy: '4', ruslan: '5', nastya: '2' },
+            { team: 'Металлург', fact: '', denis: '3', anton: '1', valeriy: '2', ruslan: '2', nastya: '1' },
+            { team: 'Нефтехимик', fact: '', denis: 'не пройдет', anton: '8', valeriy: 'не пройдет', ruslan: 'не пройдет', nastya: '8' },
+            { team: 'Сибирь', fact: '', denis: '8', anton: '7', valeriy: '7', ruslan: '8', nastya: '6' },
+            { team: 'Трактор', fact: '', denis: '6', anton: '5', valeriy: '5', ruslan: '6', nastya: '5' }
         ]
     };
 
@@ -1364,7 +1385,7 @@
         localStorage.setItem(PLAYOFF_STORAGE_KEY, JSON.stringify(data));
     }
     function buildPlayoffRow(conf, team, index, data) {
-        const d = data || { team: team, fact: '', denis: '', anton: '', valeriy: '', ruslan: '', nastya: '', gitai: '' };
+        const d = data || { team: team, fact: '', denis: '', anton: '', valeriy: '', ruslan: '', nastya: '' };
         const opts = (selected) => `
             <option value="">--</option>
             <option value="пройдет" ${selected === 'пройдет' ? 'selected' : ''}>пройдет</option>
@@ -1419,7 +1440,7 @@
     }
 
     function getPlayoffBonusTotals() {
-        const totals = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+        const totals = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
         document.querySelectorAll('#playoff-table .playoff-row').forEach(row => {
             const factSel = row.querySelector('.fact-select');
             if (!factSel) return;
@@ -1452,12 +1473,12 @@
         const container = document.getElementById('playoff-container');
         const savedData = getPlayoffData();
         let html = '<table class="playoff-table" id="playoff-table"><thead><tr><th>#</th><th>Команда</th><th>Факт</th>' + players.map(p => `<th>${playerNames[p]}</th>`).join('') + '</tr></thead><tbody>';
-        html += `<tr class="conference-header"><td colspan="9">🏒 Западная конференция</td></tr>`;
+        html += `<tr class="conference-header"><td colspan="8">🏒 Западная конференция</td></tr>`;
         westTeams.forEach((team, i) => {
             const data = savedData && savedData.west ? savedData.west.find(x => x.team === team) : null;
             html += buildPlayoffRow('west', team, i, data);
         });
-        html += `<tr class="conference-header"><td colspan="9">🏒 Восточная конференция</td></tr>`;
+        html += `<tr class="conference-header"><td colspan="8">🏒 Восточная конференция</td></tr>`;
         eastTeams.forEach((team, i) => {
             const data = savedData && savedData.east ? savedData.east.find(x => x.team === team) : null;
             html += buildPlayoffRow('east', team, i, data);
@@ -1495,8 +1516,7 @@
             'Антон Х', 'Антон Г',
             'Валерий Х', 'Валерий Г',
             'Руслан Х', 'Руслан Г',
-            'Настя Х', 'Настя Г',
-            'GIT-hub AI Х', 'GIT-hub AI Г'
+            'Настя Х', 'Настя Г'
         ];
         const rows = [header];
         const domRows = Array.from(document.querySelectorAll('#table-body .match-row'));
@@ -1525,9 +1545,7 @@
                 row.querySelector('.pred-ruslan-h').value || '',
                 row.querySelector('.pred-ruslan-a').value || '',
                 row.querySelector('.pred-nastya-h').value || '',
-                row.querySelector('.pred-nastya-a').value || '',
-                row.querySelector('.pred-gitai-h').value || '',
-                row.querySelector('.pred-gitai-a').value || ''
+                row.querySelector('.pred-nastya-a').value || ''
             ]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -1550,8 +1568,7 @@
             'Антон Х', 'Антон Г',
             'Валерий Х', 'Валерий Г',
             'Руслан Х', 'Руслан Г',
-            'Настя Х', 'Настя Г',
-            'GIT-hub AI Х', 'GIT-hub AI Г'
+            'Настя Х', 'Настя Г'
         ];
         const rows = [header];
         const domRows = Array.from(document.querySelectorAll('#table-body .match-row'));
@@ -1580,9 +1597,7 @@
                 row.querySelector('.pred-ruslan-h').value || '',
                 row.querySelector('.pred-ruslan-a').value || '',
                 row.querySelector('.pred-nastya-h').value || '',
-                row.querySelector('.pred-nastya-a').value || '',
-                row.querySelector('.pred-gitai-h').value || '',
-                row.querySelector('.pred-gitai-a').value || ''
+                row.querySelector('.pred-nastya-a').value || ''
             ]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -1720,7 +1735,6 @@
                 const playerLabels = {denis:'Денис', anton:'Антон', valeriy:'Валерий', ruslan:'Руслан', nastya:'Настя'};
                 let added = 0, ignored = 0, skipped = 0, totalDataRows = 0;
                 const conflicts = [];
-                const debugSkipped = [];
 
                 for (let i = headerIdx + 1; i < json.length; i++) {
                     const r = json[i];
@@ -1737,16 +1751,11 @@
                     }
 
                     totalDataRows++;
-
                     const date = parseAnyDateToDdMmYyyy(rawDate);
                     const home = normalizeTeamName(rawHome);
                     const away = normalizeTeamName(rawAway);
 
-                    if (!date || !home || !away) {
-                        skipped++;
-                        if (debugSkipped.length < 5) debugSkipped.push({ row: i + 1, rawDate: String(rawDate), date, home, away });
-                        continue;
-                    }
+                    if (!date || !home || !away) { skipped++; continue; }
 
                     const newData = {
                         factHome:   get(r, COLS.factHome),
@@ -1763,50 +1772,36 @@
                         const row = existingRows.get(key);
                         const sc = row.querySelectorAll('.input-score');
                         const curData = {
-                            factHome:   sc[0].value,
-                            factAway:   sc[1].value,
+                            factHome:   sc[0].value, factAway: sc[1].value,
                             type:       row.querySelector('.input-type').value,
                             factOsHome: row.querySelector('.fact-os-home').value,
                             factOsAway: row.querySelector('.fact-os-away').value
                         };
-                        predKeys.forEach(p => {
-                            curData[p] = [
-                                row.querySelector(`.pred-${p}-h`).value,
-                                row.querySelector(`.pred-${p}-a`).value
-                            ];
-                        });
+                        predKeys.forEach(p => { curData[p] = [row.querySelector(`.pred-${p}-h`).value, row.querySelector(`.pred-${p}-a`).value]; });
 
                         const diffs = [];
                         const checkField = (label, cur, nw) => {
-                            const c = String(cur || '').trim();
-                            const n = String(nw || '').trim();
+                            const c = String(cur || '').trim(), n = String(nw || '').trim();
                             if (n !== '' && c !== n) diffs.push({ label, from: c || '—', to: n });
                         };
-                        checkField('Факт Хоз',  curData.factHome,   newData.factHome);
-                        checkField('Факт Гост', curData.factAway,   newData.factAway);
-                        checkField('Тип',       curData.type,       newData.type);
-                        checkField('ОС Хоз',    curData.factOsHome, newData.factOsHome);
-                        checkField('ОС Гост',   curData.factOsAway, newData.factOsAway);
+                        checkField('Факт Хоз', curData.factHome, newData.factHome);
+                        checkField('Факт Гост', curData.factAway, newData.factAway);
+                        checkField('Тип', curData.type, newData.type);
+                        checkField('ОС Хоз', curData.factOsHome, newData.factOsHome);
+                        checkField('ОС Гост', curData.factOsAway, newData.factOsAway);
                         predKeys.forEach(p => {
                             checkField(playerLabels[p] + ' Х', curData[p][0], newData[p][0]);
                             checkField(playerLabels[p] + ' Г', curData[p][1], newData[p][1]);
                         });
-
                         if (diffs.length > 0) conflicts.push({ date, home, away, diffs });
                         ignored++;
                     } else {
                         const rowData = {
                             date, home, away,
-                            factHome:   newData.factHome,
-                            factAway:   newData.factAway,
-                            factType:   newData.type,
-                            factOsHome: newData.factOsHome,
-                            factOsAway: newData.factOsAway,
-                            denis:   newData.denis,
-                            anton:   newData.anton,
-                            valeriy: newData.valeriy,
-                            ruslan:  newData.ruslan,
-                            nastya:  newData.nastya
+                            factHome: newData.factHome, factAway: newData.factAway,
+                            factType: newData.type, factOsHome: newData.factOsHome, factOsAway: newData.factOsAway,
+                            denis: newData.denis, anton: newData.anton, valeriy: newData.valeriy,
+                            ruslan: newData.ruslan, nastya: newData.nastya
                         };
                         const tr = document.createElement('tr');
                         tr.className = 'match-row';
@@ -1822,8 +1817,6 @@
                 saveData();
                 filterRowsByDateRange();
 
-                if (debugSkipped.length > 0) console.warn('Первые пропущенные строки:', debugSkipped);
-
                 let msg = `📊 Загрузка шаблона завершена.\n\n`;
                 msg += `📄 Всего строк с данными: ${totalDataRows}\n`;
                 msg += `➕ Добавлено новых матчей: ${added}\n`;
@@ -1832,18 +1825,15 @@
 
                 if (conflicts.length > 0) {
                     msg += `\n⚠️ Найдены расхождения (НЕ применены):\n`;
-                    const showMax = 8;
-                    conflicts.slice(0, showMax).forEach(c => {
+                    conflicts.slice(0, 8).forEach(c => {
                         msg += `\n▸ ${c.date}  ${c.home} — ${c.away}\n`;
                         c.diffs.forEach(d => { msg += `   • ${d.label}: в таблице «${d.from}», в файле «${d.to}»\n`; });
                     });
-                    if (conflicts.length > showMax) msg += `\n… и ещё: ${conflicts.length - showMax}\n`;
+                    if (conflicts.length > 8) msg += `\n… и ещё: ${conflicts.length - 8}\n`;
                 }
-
                 if (totalDataRows === 0) msg += `\n❌ Не найдено ни одной корректной строки. Проверьте консоль (F12).`;
                 else if (added > 0) msg += `\n✅ Новые матчи добавлены. Очки пересчитаны.`;
                 else if (ignored > 0 && conflicts.length === 0) msg += `\n✅ Все матчи уже есть в таблице. Ничего не менялось.`;
-
                 alert(msg);
             } catch (error) {
                 console.error(error);
@@ -1854,7 +1844,8 @@
         event.target.value = '';
     }
 
-    function generateGitaiPredictions(force = false) {
+    // ======== AI-прогнозы как ИНФОРМАЦИЯ (не записываются в таблицу) ========
+    function computeTomorrowAIPredictions() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
@@ -1862,28 +1853,21 @@
         const pad = n => String(n).padStart(2, '0');
         const tomorrowStr = `${pad(tomorrow.getDate())}.${pad(tomorrow.getMonth() + 1)}.${tomorrow.getFullYear()}`;
 
-        let filled = 0, skipped = 0;
-        const log = [];
-
+        const list = [];
         document.querySelectorAll('#table-body .match-row').forEach(row => {
             const dateStr = (row.querySelector('.input-date').value || '').trim();
             if (dateStr !== tomorrowStr) return;
             const home = normalizeTeamName(row.querySelectorAll('.input-team')[0].value);
             const away = normalizeTeamName(row.querySelectorAll('.input-team')[1].value);
             if (!home || !away) return;
-            const gitaiH = row.querySelector('.pred-gitai-h');
-            const gitaiA = row.querySelector('.pred-gitai-a');
-            if (!gitaiH || !gitaiA) return;
             const factHome = row.querySelectorAll('.input-score')[0].value;
             const factAway = row.querySelectorAll('.input-score')[1].value;
-            if (factHome !== '' && factAway !== '') { skipped++; return; }
-            if (!force && gitaiH.value !== '' && gitaiA.value !== '') { skipped++; return; }
+            if (factHome !== '' && factAway !== '') return;
 
             const homeMatches = collectTeamMatches(home).slice(-10);
             const awayMatches = collectTeamMatches(away).slice(-10);
             if (homeMatches.length === 0 || awayMatches.length === 0) {
-                skipped++;
-                log.push(`⏸ ${home} – ${away}: недостаточно данных`);
+                list.push({ date: tomorrowStr, home, away, predHome: null, predAway: null, reason: 'Недостаточно данных' });
                 return;
             }
 
@@ -1903,42 +1887,59 @@
             const formDelta = (homeForm5 - awayForm5) / 10;
             expHome += formDelta * 0.4;
             expAway -= formDelta * 0.4;
-
             expHome = Math.max(0.5, expHome);
             expAway = Math.max(0.5, expAway);
 
-            let predHome = Math.min(Math.round(expHome), 8);
-            let predAway = Math.min(Math.round(expAway), 8);
-            predHome = Math.max(0, predHome);
-            predAway = Math.max(0, predAway);
+            let predHome = Math.max(0, Math.min(Math.round(expHome), 8));
+            let predAway = Math.max(0, Math.min(Math.round(expAway), 8));
 
-            gitaiH.value = predHome;
-            gitaiA.value = predAway;
-
-            filled++;
-            log.push(`✅ ${home} – ${away}: ${predHome}:${predAway}`);
+            list.push({ date: tomorrowStr, home, away, predHome, predAway, reason: '' });
         });
-
-        if (filled > 0) { calculateAllPoints(); saveData(); }
-        return { filled, skipped, log, date: tomorrowStr };
+        return { list, date: tomorrowStr };
     }
 
-    function manualGitaiRefresh() {
-        const result = generateGitaiPredictions(true);
-        let msg = `🤖 GIT-hub AI — прогнозы на ${result.date}\n\n`;
-        if (result.filled === 0 && result.skipped === 0) msg += 'На завтра нет матчей в календаре.';
-        else {
-            msg += `Проставлено прогнозов: ${result.filled}\n`;
-            if (result.skipped) msg += `Пропущено: ${result.skipped}\n`;
-            if (result.log.length) msg += '\n' + result.log.join('\n');
+    function showAIPredictions() {
+        const { list, date } = computeTomorrowAIPredictions();
+        const overlay = document.getElementById('ai-info-modal-overlay');
+        const dateEl = document.getElementById('ai-info-date');
+        const content = document.getElementById('ai-info-content');
+
+        dateEl.textContent = `Прогнозы на ${date}. Найдено матчей: ${list.length}.`;
+
+        if (list.length === 0) {
+            content.innerHTML = '<div class="ai-info-empty">На завтра нет матчей в календаре.</div>';
+        } else {
+            content.innerHTML = list.map(m => {
+                if (m.predHome === null) {
+                    return `<div class="ai-info-match">
+                        <span class="ai-date">${m.date}</span>
+                        <span class="ai-teams">${m.home} — ${m.away}</span>
+                        <span style="color:#999; font-size:12px;">${m.reason}</span>
+                    </div>`;
+                }
+                return `<div class="ai-info-match">
+                    <span class="ai-date">${m.date}</span>
+                    <span class="ai-teams">${m.home} — ${m.away}</span>
+                    <span class="ai-score">${m.predHome}:${m.predAway}</span>
+                </div>`;
+            }).join('');
         }
-        alert(msg);
-    }
 
-    function autoGitaiPredictions() {
-        const result = generateGitaiPredictions(false);
-        if (result.filled > 0) console.log(`🤖 GIT-hub AI: заполнено прогнозов на ${result.date}: ${result.filled}`);
+        overlay.classList.add('active');
     }
+    function closeAIInfo() {
+        document.getElementById('ai-info-modal-overlay').classList.remove('active');
+    }
+    document.addEventListener('click', (e) => {
+        const overlay = document.getElementById('ai-info-modal-overlay');
+        if (overlay && e.target === overlay) closeAIInfo();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('ai-info-modal-overlay');
+            if (overlay && overlay.classList.contains('active')) closeAIInfo();
+        }
+    });
 
     const embeddedData = '';
 
@@ -1947,7 +1948,7 @@
             date: '', home: '', away: '', factHome: '', factAway: '', factType: '',
             factOsHome: '', factOsAway: '',
             denis: ['', ''], anton: ['', ''], valeriy: ['', ''],
-            ruslan: ['', ''], nastya: ['', ''], gitai: ['', '']
+            ruslan: ['', ''], nastya: ['', '']
         };
         const rowData = { ...d, ...data };
         if (data.denis) rowData.denis = data.denis;
@@ -1955,7 +1956,6 @@
         if (data.valeriy) rowData.valeriy = data.valeriy;
         if (data.ruslan) rowData.ruslan = data.ruslan;
         if (data.nastya) rowData.nastya = data.nastya;
-        if (data.gitai) rowData.gitai = data.gitai;
         const selType = (val) => rowData.factType === val ? 'selected' : '';
         return `
             <td><input type="text" class="cell-input input-date" placeholder="дд.мм.гггг" value="${rowData.date}" oninput="handleInputChange(this)"></td>
@@ -1986,9 +1986,6 @@
             <td class="bg-nastya-cell"><input type="number" class="cell-input input-score pred-nastya-h" value="${rowData.nastya[0] || ''}" oninput="handleInputChange(this)"></td>
             <td class="bg-nastya-cell"><input type="number" class="cell-input input-score pred-nastya-a" value="${rowData.nastya[1] || ''}" oninput="handleInputChange(this)"></td>
             <td class="bg-nastya-cell points-cell points-nastya"></td>
-            <td class="bg-gitai-cell"><input type="number" class="cell-input input-score pred-gitai-h" value="${rowData.gitai[0] || ''}" oninput="handleInputChange(this)"></td>
-            <td class="bg-gitai-cell"><input type="number" class="cell-input input-score pred-gitai-a" value="${rowData.gitai[1] || ''}" oninput="handleInputChange(this)"></td>
-            <td class="bg-gitai-cell points-cell points-gitai"></td>
             <td><button class="btn-delete-row" onclick="deleteRow(this)" title="Удалить матч">X</button></td>
         `;
     }
@@ -2018,8 +2015,7 @@
                 anton: [parts[10].trim(), parts[11].trim()],
                 valeriy: [parts[12].trim(), parts[13].trim()],
                 ruslan: [parts[14].trim(), parts[15].trim()],
-                nastya: [parts[16].trim(), parts[17].trim()],
-                gitai: [parts[18] !== undefined ? parts[18].trim() : '', parts[19] !== undefined ? parts[19].trim() : '']
+                nastya: [parts[16].trim(), parts[17].trim()]
             };
             const tr = document.createElement('tr');
             tr.className = 'match-row';
@@ -2069,8 +2065,8 @@
 
     function calculateAllPoints() {
         const rows = document.querySelectorAll('#table-body .match-row');
-        const pList = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya', 'gitai'];
-        const totals = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0, gitai: 0 };
+        const pList = ['denis', 'anton', 'valeriy', 'ruslan', 'nastya'];
+        const totals = { denis: 0, anton: 0, valeriy: 0, ruslan: 0, nastya: 0 };
         const stats = {};
         pList.forEach(p => stats[p] = { wins: 0, total: 0 });
         rows.forEach(row => {
@@ -2123,8 +2119,7 @@
                 anton: [row.querySelector('.pred-anton-h').value, row.querySelector('.pred-anton-a').value],
                 valeriy: [row.querySelector('.pred-valeriy-h').value, row.querySelector('.pred-valeriy-a').value],
                 ruslan: [row.querySelector('.pred-ruslan-h').value, row.querySelector('.pred-ruslan-a').value],
-                nastya: [row.querySelector('.pred-nastya-h').value, row.querySelector('.pred-nastya-a').value],
-                gitai: [row.querySelector('.pred-gitai-h').value, row.querySelector('.pred-gitai-a').value]
+                nastya: [row.querySelector('.pred-nastya-h').value, row.querySelector('.pred-nastya-a').value]
             });
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -2140,7 +2135,6 @@
                 data.forEach(rowData => {
                     rowData.home = normalizeTeamName(rowData.home);
                     rowData.away = normalizeTeamName(rowData.away);
-                    if (!rowData.gitai) rowData.gitai = ['', ''];
                     const tr = document.createElement('tr');
                     tr.className = 'match-row';
                     tr.innerHTML = createRowHTML(rowData);
@@ -2206,7 +2200,6 @@
         displayCurrentDate();
         loadData();
         renderPlayoffTable();
-        setTimeout(autoGitaiPredictions, 300);
     };
 </script>
 </body>
